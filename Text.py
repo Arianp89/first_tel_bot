@@ -16,4 +16,3 @@ texts={
     }
 # wayerles tp linck tdw9960
 # etp linck
-# *#*#86583#*#*
