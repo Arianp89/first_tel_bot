@@ -120,3 +120,12 @@ def check_time():
                 return get_sale_id(key)
         time.sleep(120)
 
+def get_customer_id(sale_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True) 
+    SQL_Query = "SELECT CUSTOMER_ID FROM SALE WHERE ID=%s;"
+    cur.execute(SQL_Query,(sale_id,))
+    data = cur.fetchone()
+    cur.close()
+    conn.close()
+    return data['CUSTOMER_ID']

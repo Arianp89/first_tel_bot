@@ -29,8 +29,8 @@ user_step_profile = dict()
 user_step_ai=dict()
 user_step_profile_mid = dict()
 creat_bot_data_total_cost=dict()
-admin_step_send_file=dict()
-
+admin_step_send_location_file=dict()
+admin_send_location_data=dict() 
 
 
 def ai(message):
@@ -68,7 +68,7 @@ def customer_markup():
 
 def admin_markup():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(texts['send_file'],texts['check project'])
+    markup.add(texts['send_location_file'],texts['check project'])
     markup.add(texts['ai for admin'])
     return markup
 
@@ -263,7 +263,7 @@ def create_bot_hadler_C(message):
         if check_token(token)[0]==True:
             creat_bot_data[cid]['token']=token
             creat_bot_data[cid]['total_cost']=int(total_cost)
-            creat_bot_data[cid]['time_give']=datetime + datetime.timedelta(days=time_give)
+            creat_bot_data[cid]['time_give']=int(time_give)
             creat_bot_data[cid]['FEE_PAID']=int(total_cost)/2
             text='لطفا ویژگی های ربات خود را به صورت یک فایل صوتی  یا صدای ضبط شده ارسال کنید'
             bot.send_message(cid,text,reply_markup=back_creat_bot())
@@ -271,9 +271,9 @@ def create_bot_hadler_C(message):
         else:
             bot.send_message(cid,"توکن وارد شده درست  نمی باشد"+"\n"+'لطفا یک بار دیگه اطلاعات زیر را وارد کنید')
             user_step_creat_bot[cid]='B'
-    except:
+    except Exception as e:
         logging.error('error to split token')
-        print('eroror')
+        print('eroror', e)
         user_step_creat_bot[cid]='B'
 
 
@@ -289,7 +289,7 @@ def create_bot_handler_D(message):
     for ad in ADMIN:
         text='کاربر'+':'+ get_user_data(cid)['name']+'\n'
         text+=f'درخواست ساخت یک ربات داده است با قیمت پیشنهادی :{creat_bot_data[cid]['total_cost']}\n'
-        text+="و تاریخ تحویل"+":"+creat_bot_data[cid]['time_give']+"\n"
+        text+="و تاریخ تحویل"+":"+str(creat_bot_data[cid]['time_give'])+"\n"
         text+='این هم توکن ربات '+':'+creat_bot_data[cid]['token']+'\n'
         voice=bot.send_voice(ad,file_id,text,reply_markup=markup)
 
@@ -368,40 +368,52 @@ def user_step_profile_B(message):
 
 
 
-@bot.message_handler(func=lambda message:message.text==texts['send_file'])
-def send_file_admin_handler(message):
-    cid=message.chat.id
-    if cid in ADMIN:
-      bot.send_message(cid,'لطفا فایل پروژه را ارسال کنید'+":")
-      admin_step_send_file[cid]='A'
-    else:
-        send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',
-                     reply_markup=customer_markup())
-
-
-@bot.message_handler(func=lambda message:admin_step_send_file.get(message.chat.id)=='A',
-                     content_types=['document'])
-def send_file_admin_handler_A(message):
-    cid=message.chat.id
-    if cid in ADMIN:
-        pass        
-    else:
-        send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',
-                     reply_markup=customer_markup())
-
-
 @bot.message_handler(func=lambda message:message.text==texts['check project'])
 def check_project_handler_admin(message):
     cid = message.chat.id
-    markup=InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('پروژه های فعال ',callback_data='project_on'))
-    markup.add(InlineKeyboardButton('پروژه های تمام',callback_data='project_off'))
-    text='از منوی زیر انتخاب کن'+":"
-    bot.send_message(cid,text,reply_markup=markup)
+    if cid in ADMIN:
+        markup=InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton('پروژه های فعال ',callback_data='projects_on'))
+        markup.add(InlineKeyboardButton('پروژه های تمام',callback_data='projects_off'))
+        text='از منوی زیر انتخاب کن'+":"
+        bot.send_message(cid,text,reply_markup=markup)
+    else:
+        send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',reply_markup=customer_markup())
 
 
 
+@bot.message_handler(func=lambda message:message.text==texts['send_location_file'])
+def send_location_file_handler(message):
+    cid=message.chat.id
+    if cid in ADMIN:
+        markup=InlineKeyboardMarkup()
+        for i in get_file_id_data():
+            product_id=get_product_data_A(i)
+            product_data=get_product_data_B(product_id['PRODUCT_ID'])
+            if product_data != None:
+                if product_data['STATUS']=='no':
+                    markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f"file id_{i}"))
+        bot.send_message(cid,'لیست پروژه هایی که فایل آنها ارسال نشده'+':',reply_markup=markup)
+    else:
+        send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',reply_markup=customer_markup())
 
+@bot.message_handler(func=lambda message:admin_step_send_location_file.get(message.chat.id)=='A')
+def send_location_file_handler_A(message):
+    try:
+        cid=message.chat.id
+        id=admin_send_location_data[cid]
+        github_id='github.com/'+message.text
+        add_file_project(github_id,get_product_data_A(id)['PRODUCT_ID'])
+        chenge_status_product('yes',get_product_data_A(id)['PRODUCT_ID'])
+        bot.send_message(cid,'آدرس فایل با موفقیت ثبت شد')
+        customer_id=get_customer_id(id)
+        bot.send_message(int(customer_id),'پروژه شما با موفقیت به پایان رسید',reply_markup=customer_markup())
+    except Exception as e:
+        bot.send_message(cid,"✖"+'خطا در ارسال فایل دوباره تلاش کنید')
+        logging.error(f'error in send location file handler A :{e}')
+    admin_step_send_location_file.pop(cid)
+    admin_send_location_data.pop(cid)
+    
 
 
 
@@ -438,7 +450,7 @@ def all_callback_query_handler(call):
             bot.send_message(id,'درخواست شما با موفقت ثبت شد',reply_markup=customer_markup())
             file_name = str(time.time()).replace('.', '')
             project_id=add_new_product(None,creat_bot_data[int(id)]['token'],
-                                       creat_bot_data[cid]['time_give'],
+                                       creat_bot_data[int(id)]['time_give'],
                                        int(file_name),creat_bot_data[id]['total_cost'],
                                        creat_bot_data[id]['FEE_PAID'],
                                        creat_bot_data[id]['run_server'],'no')
@@ -523,19 +535,49 @@ def all_callback_query_handler(call):
     elif data=='run_server':
         bot.answer_callback_query(call_id,'✔')
         creat_bot_data[cid]['run_server']=True
-    elif data.startswith('project'):
+    elif data.startswith('projects'):
         _,status=data.split('_')
         markup=InlineKeyboardMarkup()
         if status=='on':
-            for i in get_file_id_data()['no']:
-                markup.add(InlineKeyboardButton(f"{i['ID']}" ))
-            markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project no'))
+            for i in get_file_id_data():
+                product_id=get_product_data_A(i)
+                product_data=get_product_data_B(product_id['PRODUCT_ID'])
+                if product_data != None:
+                    if product_data['STATUS']=='no':
+                        markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f'show_project_data {i}'))
+            markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project'))
             bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
         elif status=='off':
-            for i in get_file_id_data()['yes']:
-                markup.add(InlineKeyboardButton(f"{i['ID']}" ))
-            markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project yes'))
+            for i in get_file_id_data():
+                product_id=get_product_data_A(i)
+                product_data=get_product_data_B(product_id['PRODUCT_ID'])
+                if product_data != None:
+                    if product_data['STATUS']=='yes':
+                        markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f'show_project_data {i}')) 
+            markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project'))         
             bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
+    elif data.startswith('show_project_data'):
+        _,id=data.split()
+        product_id=get_product_data_A(id)
+        product_data=get_product_data_B(product_id['PRODUCT_ID'])
+        text='کد'+' ربات '+":"+id+'\n'
+        text+='توکن ربات'+':'+product_data['BOT_TOKEN']+'\n'
+        text+= "مبلغ کل" + ':' + str(product_data['TOTAL_COST']) + '\n'
+        text+="مبلغ پرداخت شده"+':'+str(product_data['FEE_PAID'])+'\n'
+        if product_data['RAN_IN_SERSER']==None:
+            text+='ران شود رو سرور'+':'+'✖'
+        else:
+            text+='ران شود رو سرور'+':'+'✔'
+        markup=InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project'))
+        bot.edit_message_text(text,cid,mid,reply_markup=markup)
+
+    elif data.startswith('file id'):
+        _,id=data.split('_')
+        bot.edit_message_text('لطفا آدرس گیت هاب را  وارد کنید'+":",cid,mid)
+        admin_step_send_location_file[cid]='A'
+        admin_send_location_data[cid]=id
+
     elif data.startswith('back'):
         _,to=data.split('_')
         if to=='profile':
@@ -551,14 +593,13 @@ def all_callback_query_handler(call):
             text+="شماره"+':'+get_user_data(cid)['phone']
             bot.edit_message_text(text,cid,mid,reply_markup=markup)
             bot.edit_message_text('','',)
-        elif to.startswith('check-project'):
+        elif to=='check-project':
+
             markup=InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton('پروژه های فعال ',callback_data='project_on'))
-            markup.add(InlineKeyboardButton('پروژه های تمام',callback_data='project_off'))
+            markup.add(InlineKeyboardButton('پروژه های فعال ',callback_data='projects_on'))
+            markup.add(InlineKeyboardButton('پروژه های تمام',callback_data='projects_off'))
             text='از منوی زیر انتخاب کن'+":"
             bot.edit_message_text(text,cid,mid,reply_markup=markup)
-    
-
 
 
 

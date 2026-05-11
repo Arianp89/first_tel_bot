@@ -96,3 +96,13 @@ def add_new_project(customer_id,BOT_TOKEN,BOT_SPECE_TEXT,BOT_SPECE_SOUND_ID,TOTA
     add_sale(random,customer_id)
     add_sale_row(random,project_id)
     return random
+
+def chenge_status_product(status,product_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor()
+    SQL_Query = "UPDATE PRODUCT SET STATUS=%s WHERE ID=%s;"
+    cur.execute(SQL_Query, (status,product_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    logging.info('admin add file project')
