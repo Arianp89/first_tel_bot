@@ -20,8 +20,11 @@ import datetime
 
 
 telebot.apihelper.API_URL = 'http://tapi.bale.ai/bot{0}/{1}'
-
 bot=telebot.TeleBot(API_TOKEN)
+
+
+
+
 
 creat_bot_data = dict()
 user_step_creat_bot =dict() # {cid: {'user_step':..., 'bot_token':..., 'total_cost:...'}, ...
@@ -30,7 +33,12 @@ user_step_ai=dict()
 user_step_profile_mid = dict()
 creat_bot_data_total_cost=dict()
 admin_step_send_location_file=dict()
-admin_send_location_data=dict() 
+admin_send_location_data=dict()
+admin_send_message_to_customer=dict()
+admin_send_message_to_customer_data=dict()
+
+
+
 
 
 def ai(message):
@@ -44,9 +52,6 @@ def ai(message):
     )
 
     return response.choices[0].message.content
-
-        
-
 
 
 
@@ -66,11 +71,15 @@ def customer_markup():
     return markup
 
 
+
 def admin_markup():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(texts['send_location_file'],texts['check project'])
+    markup.add(texts['send_message_to_customer'])
     markup.add(texts['ai for admin'])
     return markup
+
+
 
 def back_creat_bot():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -102,6 +111,8 @@ def check_token(token):
 
 
 
+
+
 def listener(messages):
     for m in messages:
         # print(m)
@@ -117,8 +128,9 @@ def listener(messages):
         elif m.content_type == 'voice':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: New voice recieved")
             logging.info(f"{m.chat.first_name} [{str(m.chat.id)}]: New voice recieved")
-
 bot.set_update_listener(listener)  
+
+
 
 
 
@@ -157,16 +169,20 @@ def message_contact_us_handler(message):
     cid=message.chat.id
     number=0
     text='لیست ربات هایی که درست کردیم'+'\n'
-    for token in get_product_token():
+    for token in get_all_token():
         number+=1
         text+=number+':'+'@'+check_token(token)[1]+'\n'
     send_message(cid,text)
+
+
 
 @bot.message_handler(func=lambda message:message.text=='رفتن به صفحه اصلی')
 def back_to_home_handler(message):
     cid=message.chat.id
     user_step_creat_bot.pop(cid)
     bot.send_message(cid,'از منوی زیر انتخاب کنید',reply_markup=customer_markup())
+
+
 
 @bot.message_handler(func=lambda message:message.text==texts['ai for admin'])
 def ai_handler(message):
@@ -176,6 +192,7 @@ def ai_handler(message):
         user_step_ai[cid]='A'
     else:
         send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',reply_markup=customer_markup())
+
 
 
 @bot.message_handler(func=lambda message:user_step_ai.get(message.chat.id)=='A')
@@ -188,23 +205,22 @@ def ai_handler_A(message):
     user_step_ai.pop(cid)
     
 
+
 @bot.message_handler(func=lambda message: message.text==texts['create_bot'])
 def creat_bot_handler(message):
     cid = message.chat.id
     markup=InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('روی سرور ران شود',callback_data='run_server'))
-    if get_user_data(cid) == None:
+    markup.add(InlineKeyboardButton('بله',callback_data='run server_yes'))
+    markup.add(InlineKeyboardButton('خیر',callback_data='run server_no'))
+    if get_customer_data(cid) == None:
         send_message(cid, ':لطفا نام خود را وارد کنید ')
-        creat_bot_data[cid]={'name':None,'bot_token':None,'total_cost':None,'time_give':None,'run_server':None,'voice_file_id':None,'photo_file_id':None}
+        creat_bot_data[cid]={'name':None,'bot_token':None,'total_cost':None,'time_give':None,'run_server':None,'voice_file_id':None,'photo_file_id':None,'email':None,'password':None}
         user_step_creat_bot[cid]='A'
     else:
-        text='توکن ربات'+':'+'\n'
-        text+='قیمت پیشنهادی'+':'+'\n'
-        text+='زمان تحویل پروژه'+':'+'\n'
-        text+='اگر میخواهید پروژه شما روی سرور ران شود دکمه زیر را برنید'
+        text='آیا میخواهید پروژه شما روی سرور باشد'
         bot.send_message(cid,text,reply_markup=markup)
-        creat_bot_data[cid]={'name':None,'bot_token':None,'total_cost':None,'time_give':None,'run_server':None,'voice_file_id':None,'photo_file_id':None}
-        user_step_creat_bot[cid]='C'
+        creat_bot_data[cid]={'name':None,'bot_token':None,'total_cost':None,'time_give':None,'run_server':None,'voice_file_id':None,'photo_file_id':None,'email':None,'password':None}
+
 
 
 @bot.message_handler(func=lambda message:user_step_creat_bot.get(message.chat.id) == 'A')
@@ -216,42 +232,39 @@ def create_bot_handler_A(message):
     user_step_creat_bot[cid]='B'
     creat_bot_data[cid]["name"] = message.text
 
+
+
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id)== 'B',content_types=['contact'])
 def create_bot_handler_B(message):
     cid=message.chat.id
     phone=message.contact.phone_number
     markup=InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('روی سرور ران شود',callback_data='run_server'))
-    if get_user_data(cid) == None:
+    markup.add(InlineKeyboardButton('بله',callback_data='run server_yes'))
+    markup.add(InlineKeyboardButton('خیر',callback_data='run server_no'))
+    if get_customer_data(cid) == None:
         if cid==message.contact.user_id:
             phone=phone[2:]
             add_customer(cid,creat_bot_data[cid]['name'],phone)
-    text='توکن ربات'+':'+'\n'
-    text+='قیمت پیشنهادی'+':'+'\n'
-    text+='زمان تحویل پروژه'+':'+'\n'
-    text+='اگر میخواهید پروژه شما روی سرور ران شود دکمه زیر را برنید'
+    text='آیا میخواهید پروژه شما روی سرور باشد'    
     bot.send_message(cid,text,reply_markup=markup)
-    user_step_creat_bot[cid]='C'
+
+
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id)== 'B')
 def create_bot_handler_B(message):
     cid=message.chat.id
     phone=message.text
     markup=InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('روی سرور ران شود',callback_data='run_server'))
-    if get_user_data(cid) == None:
+    markup.add(InlineKeyboardButton('بله',callback_data='run server_yes'))
+    markup.add(InlineKeyboardButton('خیر',callback_data='run server_no'))
+    if get_customer_data(cid) == None:
         if phone[:2]=='98':
             phone=phone[2:]
         elif phone[:1]=='0':
             phone=phone[1:]
-
         add_customer(cid,creat_bot_data[cid]['name'],phone)
-    text='توکن ربات'+':'+'\n'
-    text+='قیمت پیشنهادی'+':'+'\n'
-    text+='زمان تحویل پروژه'+':'+'\n'
-    text+='اگر میخواهید پروژه شما روی سرور ران شود دکمه زیر را برنید'
+    text='آیا میخواهید پروژه شما روی سرور باشد'
     bot.send_message(cid,text,reply_markup=markup)
-    user_step_creat_bot[cid]='C'
     
 
 
@@ -259,12 +272,23 @@ def create_bot_handler_B(message):
 def create_bot_hadler_C(message):
     cid=message.chat.id
     try:
-        token,total_cost,time_give,*other=message.text.split()
-        if check_token(token)[0]==True:
+        if creat_bot_data[cid]['run_server']==None:
+            token,total_cost,time_give=message.text.split()
             creat_bot_data[cid]['token']=token
             creat_bot_data[cid]['total_cost']=int(total_cost)
             creat_bot_data[cid]['time_give']=int(time_give)
             creat_bot_data[cid]['FEE_PAID']=int(total_cost)/2
+            text='لطفا ویژگی های ربات خود را به صورت یک فایل صوتی  یا صدای ضبط شده ارسال کنید'
+            bot.send_message(cid,text,reply_markup=back_creat_bot())
+        elif creat_bot_data[cid]['run_server']==True:
+            email,password,token,total_cost,time_give,*other=message.text.split()
+            creat_bot_data[cid]['email']=email
+            creat_bot_data[cid]['password']=password
+            creat_bot_data[cid]['token']=token
+            creat_bot_data[cid]['total_cost']=int(total_cost)
+            creat_bot_data[cid]['time_give']=int(time_give)
+            creat_bot_data[cid]['FEE_PAID']=int(total_cost)/2
+            add_email_password(cid,email,password) 
             text='لطفا ویژگی های ربات خود را به صورت یک فایل صوتی  یا صدای ضبط شده ارسال کنید'
             bot.send_message(cid,text,reply_markup=back_creat_bot())
             user_step_creat_bot[cid]='D'
@@ -278,7 +302,7 @@ def create_bot_hadler_C(message):
 
 
 
-@bot.message_handler(func=lambda message:user_step_creat_bot.get(message.chat.id)=='D',content_types=['voice'])
+@bot.message_handler(func=lambda message:user_step_creat_bot.get(message.chat.id)=='D',content_types=['voice','document'])
 def create_bot_handler_D(message):
     cid = message.chat.id
     send_message(cid,'اطلاعات شما برای ادمین ارسال شد لطفا کمی صبر کنید تا اطلاعات شما توسط ادمین تایید شود')
@@ -287,13 +311,11 @@ def create_bot_handler_D(message):
     markup=InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton('✔',callback_data=f'voice_yes_{cid}'),InlineKeyboardButton('✖',callback_data=f'voice_no_{cid}'))
     for ad in ADMIN:
-        text='کاربر'+':'+ get_user_data(cid)['name']+'\n'
+        text='کاربر'+':'+ get_customer_data(cid)['name']+'\n'
         text+=f'درخواست ساخت یک ربات داده است با قیمت پیشنهادی :{creat_bot_data[cid]['total_cost']}\n'
         text+="و تاریخ تحویل"+":"+str(creat_bot_data[cid]['time_give'])+"\n"
         text+='این هم توکن ربات '+':'+creat_bot_data[cid]['token']+'\n'
         voice=bot.send_voice(ad,file_id,text,reply_markup=markup)
-
-
 
 
 
@@ -306,11 +328,12 @@ def user_step_create_bot_handler_E(message):
     for ad in ADMIN:
         markup=InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton('تایید',callback_data=f'photo_true_{cid}'),InlineKeyboardButton('لغو',callback_data=f'photo_false_{cid}'))
-        text=get_user_data(cid)['name']
+        text=get_customer_data(cid)['name']
         text+=' مبلغ '
         text+=f'{creat_bot_data[cid]['total_cost']/2}'
         text+='را واریز کرد '
         bot.send_photo(ad,file_id,text,reply_markup=markup)
+
 
 
 @bot.message_handler(func=lambda message:user_step_creat_bot.get(message.chat.id)=='admin_F')
@@ -324,25 +347,22 @@ def create_bot_handler_F(message):
         send_message(user_step_creat_bot.get(cid)['cid'],message.text,reply_markup=markup)
         creat_bot_data[cid]['total_cost']=message.text.split("_")[-1]
 
-
-    
     
 
 @bot.message_handler(func=lambda message:message.text==texts['profile'])
 def profile_handler(message):
     cid=message.chat.id
-    if get_user_data(cid)==None:
+    if get_customer_data(cid)==None:
         bot.send_message(cid,'اطلاعاتی برای شما ثبت نشده')
     else:
         markup=InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton('تغییر اطلاعات',callback_data='change_information'))
         markup.add(InlineKeyboardButton("ربات های من",callback_data='my_bots'))
-        text='نام'+':'+get_user_data(cid)['name']+'\n'
-        text+="شماره"+':'+get_user_data(cid)['phone']
+        text='نام'+':'+get_customer_data(cid)['name']+'\n'
+        text+="شماره"+':'+get_customer_data(cid)['phone']
         message=send_message(cid,text,reply_markup=markup)
         user_step_profile[cid] = 'A'
         user_step_profile_mid[cid]=message
-
 
 
 
@@ -350,8 +370,8 @@ def profile_handler(message):
 def user_step_profile_A(message):
     cid=message.chat.id
     edit_customer_name(message.text,cid)
-    text='نام'+':'+get_user_data(cid)['name']+'\n'
-    text+="شماره"+':'+get_user_data(cid)['phone']
+    text='نام'+':'+get_customer_data(cid)['name']+'\n'
+    text+="شماره"+':'+get_customer_data(cid)['phone']
     bot.edit_message_text(text,cid,user_step_profile_mid[cid].message_id)
     user_step_profile.pop(cid)
 
@@ -361,8 +381,8 @@ def user_step_profile_A(message):
 def user_step_profile_B(message):
     cid=message.chat.id
     edit_customer_phone(message.text,cid)
-    text='نام'+':'+get_user_data(cid)['name']+'\n'
-    text+="شماره"+':'+get_user_data(cid)['phone']
+    text='نام'+':'+get_customer_data(cid)['name']+'\n'
+    text+="شماره"+':'+get_customer_data(cid)['phone']
     bot.edit_message_text(text,cid,user_step_profile_mid[cid].message_id)
     user_step_profile.pop(cid)
 
@@ -387,9 +407,9 @@ def send_location_file_handler(message):
     cid=message.chat.id
     if cid in ADMIN:
         markup=InlineKeyboardMarkup()
-        for i in get_file_id_data():
-            product_id=get_product_data_A(i)
-            product_data=get_product_data_B(product_id['PRODUCT_ID'])
+        for i in get_sale_row_data():
+            product_id=get_product_id_f_sale_row(i)
+            product_data=get_product_data(product_id['PRODUCT_ID'])
             if product_data != None:
                 if product_data['STATUS']=='no':
                     markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f"file id_{i}"))
@@ -397,14 +417,20 @@ def send_location_file_handler(message):
     else:
         send_message(cid,'✖'+'دستور یافت نشد'+','+'از منوی زیر انتخاب کنید'+':',reply_markup=customer_markup())
 
+
+
+
+
+
+
 @bot.message_handler(func=lambda message:admin_step_send_location_file.get(message.chat.id)=='A')
 def send_location_file_handler_A(message):
     try:
         cid=message.chat.id
         id=admin_send_location_data[cid]
         github_id='github.com/'+message.text
-        add_file_project(github_id,get_product_data_A(id)['PRODUCT_ID'])
-        chenge_status_product('yes',get_product_data_A(id)['PRODUCT_ID'])
+        add_file_project(github_id,get_product_id_f_sale_row(id)['PRODUCT_ID'])
+        chenge_status_product('yes',get_product_id_f_sale_row(id)['PRODUCT_ID'])
         bot.send_message(cid,'آدرس فایل با موفقیت ثبت شد')
         customer_id=get_customer_id(id)
         bot.send_message(int(customer_id),'پروژه شما با موفقیت به پایان رسید',reply_markup=customer_markup())
@@ -413,8 +439,37 @@ def send_location_file_handler_A(message):
         logging.error(f'error in send location file handler A :{e}')
     admin_step_send_location_file.pop(cid)
     admin_send_location_data.pop(cid)
-    
 
+
+
+@bot.message_handler(func=lambda message:message.text==texts['send_message_to_customer'])
+def admin_send_file_to_customer_handler(message):
+    cid=message.chat.id
+    markup=InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("ارسال پیام به همه",callback_data='send file_all'))
+    markup.add(InlineKeyboardButton("ارسال پیام به یک نفر",callback_data="send file_one"))
+    bot.send_message(cid,'text',reply_markup=markup)
+    
+@bot.message_handler(func=lambda message:admin_send_message_to_customer.get(message.chat.id)=='A')
+def admin_send_message_to_customer_handler_A(message):
+    cid=message.chat.id
+    number=0
+    for i in get_all_customer_data():
+        number+=1
+        if number/20==int(number/20):
+            time.sleep(2)
+        bot.send_message(i['ID'],message.text)
+    text=' ✔ ' + 'پیام شما با موفقیت ارسال شد'
+    bot.send_message(cid,text)
+
+    
+@bot.message_handler(func=lambda message:admin_send_message_to_customer.get(message.chat.id)=='B')
+def admin_send_message_to_customer_handler_A(message):
+    cid=message.chat.id
+    customer_id=admin_send_message_to_customer_data[cid]
+    bot.send_message(customer_id,message.text)
+    text=' ✔ ' + 'پیام شما با موفقیت ارسال شد'
+    bot.send_message(cid,text)
 
 
 
@@ -426,6 +481,29 @@ def all_callback_query_handler(call):
     data = call.data
     if data=='make_token_bot':
         pass
+    elif data.startswith('run server'):
+        _,run_server=data.split('_')
+        if run_server=='yes':
+            bot.answer_callback_query(call_id,'✔')
+            creat_bot_data[cid]['run_server']=True
+            text='لطفا موارد زیر راا به همین شکل را وارد کنید'+':'+'\n'
+            if have_email(creat_bot_data[cid]['email'])==None:
+                text+='ایمیل'+':'+'\n'
+                text+='رمز عبور'+':'+'\n'
+            text+="توکن ربات" + ":" + '\n'
+            text+='قیمت پیشنهادی'+ "(به تومان)" + ':'+'\n'
+            text+='زمان تحویل پروژه' + '(به تعداد روز وارد کنید)' + ':'
+            bot.edit_message_text(chat_id=cid,message_id=mid,text=text)
+            user_step_creat_bot[cid]='C'
+        elif run_server=='no':
+            bot.answer_callback_query(call_id,'✖')
+            creat_bot_data[cid]['run_server']=None
+            text='لطفا موارد زیر راا به همین شکل را وارد کنید'+':'+'\n'
+            text+='توکن ربات'+':'+'\n'
+            text+='قیمت پیشنهادی'+ "(به تومان)" + ':'+'\n'
+            text+='زمان تحویل پروژه' + '(به تعداد روز وارد کنید)' + ':'
+            bot.edit_message_text(chat_id=cid,message_id=mid,text=text)
+            user_step_creat_bot[cid]='C'
     elif data.startswith('voice'):
         _,DATA,id=data.split('_')
         if DATA=='yes':
@@ -450,28 +528,27 @@ def all_callback_query_handler(call):
             bot.send_message(id,'درخواست شما با موفقت ثبت شد',reply_markup=customer_markup())
             file_name = str(time.time()).replace('.', '')
             project_id=add_new_product(None,creat_bot_data[int(id)]['token'],
-                                       creat_bot_data[int(id)]['time_give'],
-                                       int(file_name),creat_bot_data[id]['total_cost'],
-                                       creat_bot_data[id]['FEE_PAID'],
-                                       creat_bot_data[id]['run_server'],'no')
+                                       int(creat_bot_data[int(id)]['time_give']),
+                                       int(file_name),creat_bot_data[int(id)]['total_cost'],
+                                       int(creat_bot_data[id]['FEE_PAID']),
+                                       creat_bot_data[id]['run_server'],
+                                       'no')
             random=take_random_karckter()
-            add_sale(random,id)
+            add_sale(random,int(id))
             add_sale_row(random,project_id)
-            photo_save_path=os.path.join('Data','voice',str(id))
-            os.makedirs('Data',exist_ok=True)
-            os.makedirs(os.path.join('Data','voice'),exist_ok=True)
-            os.makedirs(photo_save_path,exist_ok=True)
-            file_id =creat_bot_data[id]['voice_file_id']
-            file_info = bot.get_file(file_id)
-            print(file_info)
-            # extension = file_info.file_path.split('.')[-1]
-            file_name=file_name+'.'+'ogg'#extension
-            file_path = file_info.file_path
-            content = bot.download_file(file_path)
-            with open(os.path.join(photo_save_path, file_name), 'wb') as f:
-                f.write(content)
-
-
+            # photo_save_path=os.path.join('Data','voice',str(id))
+            # os.makedirs('Data',exist_ok=True)
+            # os.makedirs(os.path.join('Data','voice'),exist_ok=True)
+            # os.makedirs(photo_save_path,exist_ok=True)
+            # file_id =creat_bot_data[id]['voice_file_id']
+            # file_info = bot.get_file(file_id)
+            # print(file_info)
+            # # extension = file_info.file_path.split('.')[-1]
+            # file_name=file_name+'.'+'ogg'#extension
+            # file_path = file_info.file_path
+            # content = bot.download_file(file_path)
+            # with open(os.path.join(photo_save_path, file_name), 'wb') as f:
+            #     f.write(content)
 
             # voice_save_path=os.path.join('Data',id)
             # file_id =creat_bot_data[id]['photo_file_id']
@@ -483,7 +560,9 @@ def all_callback_query_handler(call):
             # content = bot.download_file(file_path)
             # with open(os.path.join(voice_save_path, file_name), 'wb') as f:
             #     f.write(content)
-        elif DATA=='false':
+            user_step_creat_bot.pop(id)
+            creat_bot_data.pop(id)
+        elif call_data=='false':
             bot.answer_callback_query(call_id,'✖')
             pass
         bot.delete_message(cid,mid)
@@ -502,7 +581,7 @@ def all_callback_query_handler(call):
         user_step_profile[cid]='A'
     elif data=='my_bots':
         markup = InlineKeyboardMarkup()
-        ids=get_bot_data(cid)
+        ids=get_sale_id_b_cid(cid)
         for id in ids:
             markup.add(InlineKeyboardButton(id, callback_data=f'bot data_{id}'))
         markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_mybots'))
@@ -521,8 +600,8 @@ def all_callback_query_handler(call):
         
     elif data.startswith('bot data'):
         _,id=data.split('_')
-        product_id=get_product_data_A(id)
-        product_data=get_product_data_B(product_id)
+        product_id=get_product_id_f_sale_row(id)
+        product_data=get_product_data(product_id)
         text='کد'+' ربات '+":"+id+'\n'
         text+='توکن ربات'+':'+product_data['BOT_TOKEN']+'\n'
         text+= "مبلغ کل" + ':' + str(product_data['TOTAL_COST']) + '\n'
@@ -539,18 +618,18 @@ def all_callback_query_handler(call):
         _,status=data.split('_')
         markup=InlineKeyboardMarkup()
         if status=='on':
-            for i in get_file_id_data():
-                product_id=get_product_data_A(i)
-                product_data=get_product_data_B(product_id['PRODUCT_ID'])
+            for i in get_sale_row_data():
+                product_id=get_product_id_f_sale_row(i)
+                product_data=get_product_data(product_id['PRODUCT_ID'])
                 if product_data != None:
                     if product_data['STATUS']=='no':
                         markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f'show_project_data {i}'))
             markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project'))
             bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
         elif status=='off':
-            for i in get_file_id_data():
-                product_id=get_product_data_A(i)
-                product_data=get_product_data_B(product_id['PRODUCT_ID'])
+            for i in get_sale_row_data():
+                product_id=get_product_id_f_sale_row(i)
+                product_data=get_product_data(product_id['PRODUCT_ID'])
                 if product_data != None:
                     if product_data['STATUS']=='yes':
                         markup.add(InlineKeyboardButton(f"{i}" ,callback_data=f'show_project_data {i}')) 
@@ -558,8 +637,8 @@ def all_callback_query_handler(call):
             bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
     elif data.startswith('show_project_data'):
         _,id=data.split()
-        product_id=get_product_data_A(id)
-        product_data=get_product_data_B(product_id['PRODUCT_ID'])
+        product_id=get_product_id_f_sale_row(id)
+        product_data=get_product_data(product_id['PRODUCT_ID'])
         text='کد'+' ربات '+":"+id+'\n'
         text+='توکن ربات'+':'+product_data['BOT_TOKEN']+'\n'
         text+= "مبلغ کل" + ':' + str(product_data['TOTAL_COST']) + '\n'
@@ -571,13 +650,31 @@ def all_callback_query_handler(call):
         markup=InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton('بازگشت به قبل',callback_data='back_check-project'))
         bot.edit_message_text(text,cid,mid,reply_markup=markup)
-
     elif data.startswith('file id'):
         _,id=data.split('_')
         bot.edit_message_text('لطفا آدرس گیت هاب را  وارد کنید'+":",cid,mid)
         admin_step_send_location_file[cid]='A'
         admin_send_location_data[cid]=id
+    elif data.startswith('send message'):
+        _,customer_id=data.split('_')
+        admin_send_message_to_customer_data[cid]=customer_id
+        admin_send_message_to_customer[cid]='B'
+        text='لطفا پیام خود را وارد کنید' + ':'
+        bot.edit_message_text(text,cid,mid)
 
+    elif data.startswith('send file'):
+        _,status=data.split('_')
+        if status=='all':
+            admin_send_message_to_customer[cid]='A'
+            text='لطفا پیام خود را وارد کنید' + ':'
+            bot.edit_message_text(text,cid,mid)
+        elif status=='one':
+            markup=InlineKeyboardMarkup()
+            for i in get_all_customer_data():
+                markup.add(InlineKeyboardButton(i['NAME'],callback_data=f'send message_{i['ID']}'),
+                           InlineKeyboardButton(i['PHONE'],callback_data=f'send message_{i['ID']}'))
+            text='لطفا انتخاب کنید به چه کسی می خواهید پیام دهید' + ':'
+            bot.edit_message_text(text,cid,mid,reply_markup=markup)
     elif data.startswith('back'):
         _,to=data.split('_')
         if to=='profile':
@@ -589,17 +686,17 @@ def all_callback_query_handler(call):
             markup=InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton('تغییر اطلاعات',callback_data='change_information'))
             markup.add(InlineKeyboardButton("ربات های من",callback_data='my_bots'))
-            text='نام'+':'+get_user_data(cid)['name']+'\n'
-            text+="شماره"+':'+get_user_data(cid)['phone']
+            text='نام'+':'+get_customer_data(cid)['name']+'\n'
+            text+="شماره"+':'+get_customer_data(cid)['phone']
             bot.edit_message_text(text,cid,mid,reply_markup=markup)
             bot.edit_message_text('','',)
         elif to=='check-project':
-
             markup=InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton('پروژه های فعال ',callback_data='projects_on'))
             markup.add(InlineKeyboardButton('پروژه های تمام',callback_data='projects_off'))
             text='از منوی زیر انتخاب کن'+":"
             bot.edit_message_text(text,cid,mid,reply_markup=markup)
+
 
 
 
