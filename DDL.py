@@ -25,6 +25,8 @@ def create_table_customer(database_name):
     `ID`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `NAME`              VARCHAR(20) ,
     `PHONE`             VARCHAR(11) ,
+    `EMAIL`             VARCHAR(50) ,
+    PASSWORD            VARCHAR(50) ,
     `REGISTER_DATE`     DATETIME DEFAULT CURRENT_TIMESTAMP,
     `LAST_UPDATE`       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );

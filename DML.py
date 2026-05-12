@@ -21,6 +21,18 @@ def add_customer( id ,name , phone ):
     logging.info(f' add new customer by id:{id},name{name}')
     return cur.lastrowid
 
+
+def add_email_password(cid,email,password):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor()
+    SQL_Query = "UPDATE CUSTOMER SET EMAIL=%s,password=%s where ID=%s"
+    cur.execute(SQL_Query, (email,password,cid))
+    conn.commit()
+    cur.close()
+    conn.close()
+    logging.info(f'the customer change name to(cid)')
+
+
 def add_new_product(ID,BOT_TOKEN,TIME_GIVE,BOT_SPECE_SOUND_ID,TOTAL_COST,FEE_PAID,RAN_IN_SERSER=None,STATUS=None):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor()
@@ -90,8 +102,8 @@ def add_file_project(file_id,product_id):
     logging.info('admin add file project')
 
 
-def add_new_project(customer_id,BOT_TOKEN,BOT_SPECE_TEXT,BOT_SPECE_SOUND_ID,TOTAL_COST,FEE_PAID,RAN_IN_SERSER=None):
-    project_id=add_new_product(None,BOT_TOKEN,BOT_SPECE_TEXT,BOT_SPECE_SOUND_ID,TOTAL_COST,FEE_PAID,RAN_IN_SERSER)
+def add_new_project(customer_id,EMAIL,PASSWORD,BOT_TOKEN,TIME_GIVE,BOT_SPECE_SOUND_ID,TOTAL_COST,FEE_PAID,RAN_IN_SERSER=None):
+    project_id=add_new_product(None,EMAIL,PASSWORD,BOT_TOKEN,TIME_GIVE ,BOT_SPECE_SOUND_ID,TOTAL_COST,FEE_PAID,RAN_IN_SERSER)
     random=take_random_karckter()
     add_sale(random,customer_id)
     add_sale_row(random,project_id)
