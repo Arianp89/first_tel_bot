@@ -142,14 +142,13 @@ def came_customer_black_list(customer_id):
     logging.info(f'customer {customer_id} came from the black list')
 
 
-def register_user(cid):
+def register_user(cid,name):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor()
     cur.execute("SELECT * FROM CUSTOMER WHERE ID=%s", (cid,))
     user = cur.fetchone()
     if user==None:
-        cur.execute("INSERT INTO CUSTOMER (ID) VALUES (%s)", (cid,))
+        cur.execute("INSERT INTO CUSTOMER (ID,NAME) VALUES (%s,%s)", (cid,name))
         conn.commit()
     cur.close()
     conn.close()
-    print(1)

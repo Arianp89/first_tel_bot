@@ -100,7 +100,7 @@ def check_token(token):
 def listener(messages):
     for m in messages:
         # print(m)
-        register_user(m.chat.id)
+        register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
             logging.info(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
@@ -120,7 +120,7 @@ bot.set_update_listener(listener)
 @bot.message_handler(commands=['start'])
 def message_start_handler(message):
     cid=message.chat.id
-    register_user(cid)
+    register_user(cid,message.chat.first_name)
     if check_black_list(cid)==False:
         if cid in ADMIN:
             send_message(cid, texts['admin_welcome'], reply_markup=admin_markup())
@@ -184,7 +184,7 @@ def creat_bot_handler(message):
         markup=InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(texts['yes'], callback_data='run server_yes'))
         markup.add(InlineKeyboardButton(texts['no'], callback_data='run server_no'))
-        if get_customer_data(cid)['name'] == None:
+        if get_customer_data(cid)['phone'] == None:
             send_message(cid, texts['enter_name'])
             creat_bot_data[cid]={'name':None,'bot_token':None,'total_cost':None,'time_give':None,'run_server':None,'voice_file_id':None,'photo_file_id':None,'email':None,'password':None}
             user_step_creat_bot[cid]='A'
@@ -208,7 +208,7 @@ def create_bot_handler_B_contact(message):
     markup=InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton(texts['yes'], callback_data='run server_yes'))
     markup.add(InlineKeyboardButton(texts['no'], callback_data='run server_no'))
-    if get_customer_data(cid)['name'] == None:
+    if get_customer_data(cid)['phone'] == None:
         if cid==message.contact.user_id:
             if phone.startswith('98') :
                 phone=phone[2:] 
@@ -222,7 +222,7 @@ def create_bot_handler_B_text(message):
     markup=InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton(texts['yes'], callback_data='run server_yes'))
     markup.add(InlineKeyboardButton(texts['no'], callback_data='run server_no'))
-    if get_customer_data(cid)['name'] == None:
+    if get_customer_data(cid)['phone'] == None:
         if phone[:2]=='98':
             phone=phone[2:]
         elif phone[:1]=='0':
@@ -320,15 +320,16 @@ def profile_handler(message):
         if get_customer_data(cid)==None:
             bot.send_message(cid, texts['no_info_found'])
         else:
-            if get_customer_data(cid)['name']==None:
+            markup=InlineKeyboardMarkup()
+            if get_customer_data(cid)['phone']==None:
                 name='ثبت نشده'
                 phone='ثبت نشده'
+                markup.add(InlineKeyboardButton('وارد کردن اطلاعات',callback_data='send_info'))
             else:
                 name=get_customer_data(cid)['name']
                 phone=get_customer_data(cid)['phone']
-            markup=InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['edit_bot'], callback_data='change_information'))
-            markup.add(InlineKeyboardButton(texts['my_bots'], callback_data='my_bots'))
+                markup.add(InlineKeyboardButton(texts['edit_bot'], callback_data='change_information'))
+                markup.add(InlineKeyboardButton(texts['my_bots'], callback_data='my_bots'))
             text = texts['profile_info'].format(name=name, phone=phone)
             msg=send_message(cid, text, reply_markup=markup, parse_mode='HTML')
             user_step_profile[cid] = 'A'
@@ -337,20 +338,52 @@ def profile_handler(message):
 @bot.message_handler(func=lambda message:user_step_profile.get(message.chat.id)=='A')
 def user_step_profile_A(message):
     cid=message.chat.id
-    edit_customer_name(message.text,cid)
-    text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
-    bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
-    user_step_profile.pop(cid)
+    if get_customer_data(cid)['phone']!=None:
+        edit_customer_name(message.text,cid)
+        text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
+        bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+        user_step_profile.pop(cid)
+    else:
+        edit_customer_name(message.text,cid)
+        user_step_profile[cid]='B'
+        markup=ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton('ارسال شماره تلفن', request_contact=True))
+        bot.send_message(cid, 'لطفا شماره تلفن خود را ارسال کنید', reply_markup=markup)
 
+
+
+@bot.message_handler(func=lambda message:user_step_profile.get(message.chat.id)=='B',content_types=['contact'])
+def user_step_profile_B(message):
+    cid=message.chat.id
+    if get_customer_data(cid)['phone']!=None:
+        edit_customer_phone(message.text,cid)
+        text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
+        bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+        user_step_profile.pop(cid)
+    else:
+        phone_number=message.contact.phone_number
+        if message.contact.user_id==cid:
+            if phone_number.startswith('98') :
+                phone_number=phone_number[2:]
+            elif phone_number.startswith('0'):
+                phone_number=phone_number[1:]
+            edit_customer_phone(phone_number,cid)
+            user_step_profile.pop(cid)
+            bot.send_message(cid, 'اطلاعات شما با موفقیت ثبت شد', reply_markup=customer_markup())
 
 
 @bot.message_handler(func=lambda message:user_step_profile.get(message.chat.id)=='B')
 def user_step_profile_B(message):
     cid=message.chat.id
-    edit_customer_phone(message.text,cid)
-    text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
-    bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
-    user_step_profile.pop(cid)
+    if get_customer_data(cid)['phone']!=None:
+        edit_customer_phone(message.text,cid)
+        text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
+        bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+        user_step_profile.pop(cid)
+    else:
+        edit_customer_phone(message.text,cid)
+        user_step_profile.pop(cid)
+        bot.send_message(cid, 'اطلاعات شما با موفقیت ثبت شد', reply_markup=customer_markup())
 
 @bot.message_handler(func=lambda message:message.text==texts['check_project'])
 def check_project_handler_admin(message):
@@ -539,7 +572,7 @@ def all_callback_query_handler(call):
         elif call_data=='false':
             markup=InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton('مبلغ وارد شده اشتباه بود',callback_data=f'entered_wrong {id}'))
-            markup.add(InlineKeyboardButton(' عکس فیش نبود',callback_data=f'photo_n_receipt {id}'))
+            markup.add(InlineKeyboardButton(' عکس فیش نبود',callback_data=f'photo_not_receipt {id}'))
             bot.send_message(cid,' چرا این کاربر تایید نشد',reply_markup=markup)
             bot.answer_callback_query(call_id,'✖')
         bot.delete_message(cid,mid)
@@ -549,13 +582,26 @@ def all_callback_query_handler(call):
         user_step_creat_bot[cid]='F'
         creat_bot_data[cid]=id
         bot.edit_message_text('کاربر چقدر از این مبلغ را پرداخت کرد',cid,mid)
+    elif data.startswith('photo_not_receipt'):
+        _,customer_id=data.split()
+        user_step_creat_bot[customer_id]='D'
+        bot.send_message(customer_id,'لطفا عکس فیش را درست ارسال کنید')
+        bot.edit_message_text('پیام برای کاربر ارسال شد',cid,mid)
+
 
     elif data=='change_information':
         markup=InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['change_name'],callback_data='change_name'),
-                   InlineKeyboardButton(texts['change_phone_number'],callback_data='change_phone_number'))
-        markup.add(InlineKeyboardButton(texts["back"],callback_data='back_profile'))
-        bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
+        if get_customer_data(cid)['phone']!=None:
+            markup.add(InlineKeyboardButton(texts['change_name'],callback_data='change_name'),
+                    InlineKeyboardButton(texts['change_phone_number'],callback_data='change_phone_number'))
+            markup.add(InlineKeyboardButton(texts["back"],callback_data='back_profile'))
+            bot.edit_message_reply_markup(cid,mid,reply_markup=markup)
+        else:
+            markup.add(InlineKeyboardButton('وارد کردن اطلاعات',callback_data='send_info'))
+
+    elif data=='send_info':
+        send_message(cid, texts['enter_name'])
+        user_step_profile[cid]='A'    
 
     elif data==('change_phone_number'):
         send_message(cid, texts['enter_phone'])
@@ -624,8 +670,7 @@ def all_callback_query_handler(call):
         elif status=='one':
             markup=InlineKeyboardMarkup()
             for i in get_all_customer_data():
-                if i['NAME']==None:
-                    name='ثبت نشوده'
+                if i['PHONE']==None:
                     phone='ثبت نشوده'
                 else:
                     name=i['NAME']
@@ -645,9 +690,9 @@ def all_callback_query_handler(call):
     elif data=='customer_data':
         markup=InlineKeyboardMarkup()
         for i in get_all_customer_data():
-            if i['NAME']==None:
-                name='ثبت نشوده'
+            if i['PHONE']==None:
                 phone='ثبت نشوده'
+                name=i['NAME']
             else:
                 name=i['NAME']
                 phone=i['PHONE']
@@ -715,7 +760,7 @@ def all_message_handler(message):
             send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
 
 
-def check_time(day,sleep):
+def check_time(day,sleep):#one time in a day check for users that their 100 days is coming to end and send message to admin to check if they have registered project or not
     bans_time=[]
     while True:
         now = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -726,10 +771,10 @@ def check_time(day,sleep):
             if now == previous_date and id not in bans_time:
                 for ad in ADMIN:
                     time.sleep(2)
-                    bot.send_message(ad, f'کاربر با آیدی {get_sale_id(id)['SALE_ID']} در تاریخ {times} ثبت نام کرده است و باید بررسی شود که آیا پروژه ای ثبت کرده یا نه')
+                    bot.send_message(ad,texts['new_user_registered'].format(sale_id=get_sale_id(id)['SALE_ID'], time=times))
         time.sleep(sleep)
 
-t1 = threading.Thread(target=check_time, args=(3,3600*24))
+t1 = threading.Thread(target=check_time, args=(3,3600*24))#one time in a day check for users that their 100 days is coming to end and send message to admin to check if they have registered project or not
 t1.start()
 
 
