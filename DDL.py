@@ -26,7 +26,8 @@ def create_table_customer(database_name):
     `NAME`              VARCHAR(20) ,
     `PHONE`             VARCHAR(11) ,
     `EMAIL`             VARCHAR(50) ,
-    PASSWORD            VARCHAR(50) ,
+    `PASSWORD`          VARCHAR(50) ,
+    `BLACK_LIST`        VARCHAR(5)  ,
     `REGISTER_DATE`     DATETIME DEFAULT CURRENT_TIMESTAMP,
     `LAST_UPDATE`       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
