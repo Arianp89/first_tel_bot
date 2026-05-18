@@ -95,13 +95,24 @@ def check_token(token):
         return False
 
 
-
+checks_time_num=dict()
+def find_scam(cid):
+    global checks_time_num
+    now = time.time()
+    if id not in checks_time_num:
+        checks_time_num[cid]=[0,time.time()]
+    if now-checks_time_num[cid][1] < 5:
+        checks_time_num[cid][0] += 1
+    if checks_time_num[cid][0] == 5+1:
+        add_customer_black_list(cid)
+    checks_time_num[id][1]=time.time()
 
 
 
 def listener(messages):
     for m in messages:
         # print(m)
+        find_scam(m.chat.id)
         register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
