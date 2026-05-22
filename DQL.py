@@ -139,14 +139,14 @@ def have_email(email):
 def check_black_list(CUSTOMER_ID):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor(dictionary=True) 
-    SQL_Query = "SELECT BLACK_LIST FROM CUSTOMER  WHERE ID=%s;"
+    SQL_Query = "SELECT STATUS FROM BLACK_LIST  WHERE CUSTOMER_ID=%s;"
     cur.execute(SQL_Query,(CUSTOMER_ID,))
     data = cur.fetchone()
     cur.close()
     conn.close()
     if data==None:
         return False
-    if data['BLACK_LIST']=='yes':
+    if data['STATUS']=='yes':
         return True
     return False
 
@@ -170,3 +170,27 @@ def get_all_regester_date():
     cur.close()
     conn.close()
     return {row['ID']: [row['REGISTER_DATE'], row['TIME_GIVE']] for row in data}
+
+
+def get_black_list_list():
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+    SQL_QUERY = "SELECT * FROM BLACK_LIST;"
+    cur.execute(SQL_QUERY)
+    data = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [row['CUSTOMER_ID'] for row in data]
+
+
+
+def get_customer_black(customer_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+    SQL_QUERY = "SELECT * FROM BLACK_LIST WHERE CUSTOMER_ID=%s;"
+    cur.execute(SQL_QUERY , (customer_id, ))
+    data = cur.fetchone()
+    cur.close()
+    conn.close()
+    return data
+

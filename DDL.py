@@ -27,7 +27,7 @@ def create_table_customer(database_name):
     `PHONE`             VARCHAR(11) ,
     `EMAIL`             VARCHAR(50) ,
     `PASSWORD`          VARCHAR(50) ,
-    `BLACK_LIST`        VARCHAR(5)  ,
+
     `REGISTER_DATE`     DATETIME DEFAULT CURRENT_TIMESTAMP,
     `LAST_UPDATE`       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
@@ -104,7 +104,32 @@ def create_table_sale_row(database_name):
     cur.close()
     conn.close()
     print(f'table sale_row created successfully')
-    logging.info(f'table sale_row created successfully') 
+    logging.info(f'table sale_row created successfully')
+
+
+
+
+def create_table_black_list(database_name):
+    conn=mysql.connector.connection.MySQLConnection(**db_confing , database=database_name)
+    cur=conn.cursor()
+    SQL_Query="""
+    CREATE TABLE BLACK_LIST(
+    `CUSTOMER_ID`       BIGINT UNSIGNED NOT NULL,
+    `STATUS`            VARCHAR(5),
+    `STAGE`             INT,
+    `TIME`              INT,
+    `DON`               VARCHAR(5),
+    `REGEITER_DATE`     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `LAST_UPDATE`       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (CUSTOMER_ID) REFERENCES CUSTOMER(ID)
+    );
+    """
+    cur.execute(SQL_Query)
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f'table black_list created successfully')
+    logging.info(f'table sale_row created successfully')
 
 
 if __name__ == '__main__':
@@ -113,4 +138,5 @@ if __name__ == '__main__':
     create_table_product(database_name)
     create_table_sale(database_name)
     create_table_sale_row(database_name)
+    create_table_black_list(database_name)
     print('end the project')
