@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # bot_1st
 
 [فارسی](README.fa.md)
@@ -126,3 +127,6 @@ The bot listens for incoming messages and automatically handles customer and adm
 ## License
 
 Add a license file if you plan to publish this repository publicly.
+=======
+<h3> it is my first bot </h3>
+>>>>>>> 6899d4168d640f541ca6d7bfff8de28f932e0b12
