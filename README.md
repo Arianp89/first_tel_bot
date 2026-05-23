@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 # bot_1st
 
-[فارسی](README.fa.md)
+[🔗مستندات فارسی](README.fa.md)
 
 A Telegram/Bale customer and admin bot for managing project orders, communicating with clients, and tracking development requests.
 
