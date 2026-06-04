@@ -126,7 +126,7 @@ def find_scam(cid, maximum_time, maximum_watch):
 # Main Global Chat Update Listener Routine
 def listener(messages):
     for m in messages:
-        find_scam(m.chat.id, 3, 3)
+        find_scam(m.chat.id,0.1111  , 10 )
         register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
@@ -471,20 +471,23 @@ def check_project_handler_admin(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if cid in ADMIN:
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
-            markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
-            all_project = 0
-            on_project = 0
-            off_project = 0
-            for project in get_all_product_data():
-                all_project += 1
-                if project['STATUS'] == 'no':
-                    on_project += 1
-                else:
-                    off_project += 1
-            text = texts['project_stats_admin'].format(all_project=all_project, on_project=on_project, off_project=off_project)
-            bot.send_message(cid, text, reply_markup=markup)
+            if get_all_product_data()!=[]:
+                markup = InlineKeyboardMarkup()
+                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
+                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
+                all_project = 0
+                on_project = 0
+                off_project = 0
+                for project in get_all_product_data():
+                    all_project += 1
+                    if project['STATUS'] == 'no':
+                        on_project += 1
+                    else:
+                        off_project += 1
+                text = texts['project_stats_admin'].format(all_project=all_project, on_project=on_project, off_project=off_project)
+                bot.send_message(cid, text, reply_markup=markup)
+            else:
+                bot.send_message(cid,texts['no_active_projects'])
         else:
             send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
 
@@ -580,10 +583,14 @@ def check_customer_handler(message):
         for i in get_all_customer_data():
             customer_num += 1
             if get_customer_black(i['ID']) !=None:
+                print(1,'ok')
                 if get_customer_black(i['ID'])['STATUS'] == 'yes':
                     yes_black_list += 1
                 else:
                     no_black_list += 1
+            else:
+                no_black_list += 1
+            print(no_black_list,yes_black_list)
         text = texts['customer_stats_admin'].format(customer_num=customer_num, yes_black_list=yes_black_list, no_black_list=no_black_list)
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(texts['btn_view_customers'], callback_data='customer_data'))
@@ -643,7 +650,7 @@ def all_callback_query_handler(call):
         elif DATA == 'no':
             bot.answer_callback_query(call_id, '✖️')
             bot.send_message(id, texts['admin_rejected_retry'])
-            user_step_creat_bot.pop(int(id), None)
+            user_step_creat_bot.pop(int(id))
             bot.delete_message(cid, mid)
 
     elif data.startswith('photo'): 
@@ -830,12 +837,13 @@ def all_callback_query_handler(call):
     
     elif data.startswith('unclosed customer'):
         _, customer_id = data.split('_')
-        came_customer_black_list(customer_id)
+        came_customer_black_list(customer_id,1)
         bot.send_message(cid, texts['user_unbanned_success'])
         logging.info(f"Admin manually unbanned user {customer_id}.")
 
     elif data.startswith('delete customer'):
         _, customer_id = data.split('_')
+        print(customer_id)
         delete_customer(customer_id)
         bot.send_message(cid, texts['user_deleted_success'])
         logging.info(f"Admin manually deleted user {customer_id} account from system.")
@@ -892,23 +900,27 @@ t1.start()
 
 
 # Runtime monitor process running over unban states dynamically
-def check_find_spam_status(warning_1=60 * 15, warning_2=3600, sleep_time=60):   
+def check_find_spam_status(warning_1=60 * 15, warning_2=3600, sleep_time=60):
+    regester_time=time.time()   
     while True:
         now = time.time()
         for cid in get_black_list_list():
             data = get_customer_black(cid) 
             if data['STAGE'] == 1 and data['DON'] == 'no':
                 if int(now - data['TIME']) > warning_1:
-                    came_customer_black_list(cid)
+                    came_customer_black_list(cid,1)
                     bot.send_message(cid, texts['unbanned_message'])
                     find_spam_data.pop(cid)                   
                     logging.info(f"User {cid} has been auto-unbanned from Stage 1 spam restrictions.")
 
             elif data['STAGE'] == 2 and data['DON'] == 'no':
                 if int(now - data['TIME']) > warning_2:
-                    came_customer_black_list(cid)
+                    came_customer_black_list(cid,2)
                     find_spam_data.pop(cid)
                     logging.info(f"User {cid} has been auto-unbanned from Stage 2 spam restrictions.")
+        if now-regester_time==3600:
+            for all in get_black_list_list():
+                find_spam_data.pop(all)
         time.sleep(sleep_time)
 
 t2 = threading.Thread(target=check_find_spam_status, args=())

@@ -137,12 +137,11 @@ def add_customer_black_list(customer_id,time,stage=1,don='no'):
     cur.close()
     conn.close()
 
-def came_customer_black_list(customer_id):
-    print('came')
+def came_customer_black_list(customer_id,stage):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor()
-    SQL_Query = "UPDATE BLACK_LIST SET STATUS=%s,DON=%s WHERE CUSTOMER_ID=%s;"
-    cur.execute(SQL_Query, ('no','yes',customer_id))
+    SQL_Query = "UPDATE BLACK_LIST SET STATUS=%s,STAGE=%s,DON=%s WHERE CUSTOMER_ID=%s;"
+    cur.execute(SQL_Query, ('no',stage,'yes',customer_id))
     conn.commit()
     cur.close()
     conn.close()
@@ -163,9 +162,43 @@ def register_user(cid,name):
 
 
 def delete_customer(cid):
-    conn = mysql.connector.connect(**db_confing, database=database_name)
+    conn = mysql.connector.connect(
+        **db_confing,
+        database=database_name
+    )
     cur = conn.cursor()
-    cur.execute("DELETE FROM CUSTOMER WHERE ID=%s", (cid,))
-    conn.commit()
-    cur.close()
-    conn.close()
+
+    try:
+        # حذف مشتری از لیست سیاه (در صورت وجود)
+        cur.execute(
+            "DELETE FROM BLACK_LIST WHERE CUSTOMER_ID = %s",
+            (cid,)
+        )
+
+        # حذف تمام خریدهای مشتری
+        cur.execute(
+            "DELETE FROM SALE WHERE CUSTOMER_ID = %s",
+            (cid,)
+        )
+
+        # حذف خود مشتری
+        cur.execute(
+            "DELETE FROM CUSTOMER WHERE ID = %s",
+            (cid,)
+        )
+
+        conn.commit()
+
+    except mysql.connector.Error as err:
+        conn.rollback()
+        print(f"خطای پایگاه داده: {err}")
+
+    finally:
+        cur.close()
+        conn.close()
+register_user(1,'aaaaaaaaaa')
+add_customer(1,'ali',9339798695)
+add_new_product(1,'token',14,111111,50000000,1,STATUS='no')
+add_sale('aaa',1)
+add_sale_row('aaa',1)
+delete_customer(1)
