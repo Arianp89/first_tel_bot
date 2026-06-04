@@ -1,6 +1,6 @@
 import os,logging
 
-logging.basicConfig(level=logging.INFO, filename='project.log', format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, filename='project.log',encoding="utf-8" , format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 db_confing={'host': os.environ.get('db_host'),'user': os.environ.get('db_user'),'password': os.environ.get('password')}
