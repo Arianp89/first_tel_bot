@@ -126,7 +126,7 @@ def find_scam(cid, maximum_time, maximum_watch):
 # Main Global Chat Update Listener Routine
 def listener(messages):
     for m in messages:
-        find_scam(m.chat.id,0.1111  , 10 )
+        find_scam( m.chat.id , 1 , 10 )
         register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
@@ -198,18 +198,23 @@ def B_contact_us_handler(message):
 
 # About Us layout distribution logic
 @bot.message_handler(func=lambda message: message.text == texts['about_us'])
-def message_about_us_handler(message):
+def about_us_handler(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         number = 0
         text = texts['bot_list_header']
         for token in get_all_token():
             number += 1
-            check_res = check_token(token)
+            try:
+                check_res = check_token(token)
+            except:
+                logging.error('have error to check token in adout_us button')
             if check_res:
                 text += f"{number}: @{check_res[1]}\n"
-        send_message(cid, text)
-
+        if number >= 5:
+            send_message(cid, text)
+        else:
+            bot.send_message(cid,'این دکمه فعلا خاموش است')
 
 # Navigation back processing menu
 @bot.message_handler(func=lambda message: message.text == texts['go_home'])
@@ -383,7 +388,7 @@ def user_step_create_bot_handler_F(message):
                                     int(message.text),
                                     creat_bot_data[customer_id]['run_server'],
                                     'no')
-        sale_id = take_random_karckter()
+        sale_id = take_random_karakter()
         add_sale(sale_id, customer_id)
         add_sale_row(sale_id, project_id)
         user_step_creat_bot.pop(cid, None)
@@ -417,9 +422,10 @@ def user_step_profile_A(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if get_customer_data(cid)['phone'] != None:
-            edit_customer_name(message.text, cid)
-            text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
-            bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+            name=message.text
+            edit_customer_name(name, cid)
+            text=' نام شما به '+ name +' تغییر کرد '
+            bot.send_message(cid,text)
             user_step_profile.pop(cid)
         else:
             edit_customer_name(message.text, cid)
@@ -434,9 +440,10 @@ def user_step_profile_B(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if get_customer_data(cid)['phone'] != None:
-            edit_customer_phone(message.text, cid)
-            text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
-            bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+            phone=message.text
+            edit_customer_phone(phone, cid)
+            text ='شماره تماس شما به  '+ phone +' تغییر کرد '
+            bot.send_message(cid,text, parse_mode='HTML')
             user_step_profile.pop(cid)
         else:
             phone_number = message.contact.phone_number
@@ -455,9 +462,10 @@ def user_step_profile_B_text(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if get_customer_data(cid)['phone'] != None:
+            phone=message.text
             edit_customer_phone(message.text, cid)
-            text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
-            bot.edit_message_text(text, cid, user_step_profile_mid[cid].message_id, parse_mode='HTML')
+            text ='شماره تماس شما به  '+ phone +' تغییر کرد '
+            bot.send_message( cid , text )
             user_step_profile.pop(cid)
         else:
             edit_customer_phone(message.text, cid)
@@ -524,7 +532,7 @@ def send_location_file_handler_A(message):
             id = admin_send_location_data[cid]
             github_id = 'github.com/' + message.text
             add_file_project(github_id, get_product_id_f_sale_row(id)['PRODUCT_ID'])
-            chenge_status_product('yes', get_product_id_f_sale_row(id)['PRODUCT_ID'])
+            change_product_status('yes', get_product_id_f_sale_row(id)['PRODUCT_ID'])
             bot.send_message(cid, texts['file_link_saved'])
             customer_id = get_customer_id(id)
             bot.send_message(int(customer_id), texts['project_finished_user'], reply_markup=customer_markup())
@@ -631,7 +639,6 @@ def all_callback_query_handler(call):
         elif answer == 'no':
             bot.answer_callback_query(call_id, '✖️')
             bot.delete_message(cid, mid)
-            user_step_contact_us.pop(cid)
     
     elif data.startswith('response contact'):
         _, customer_id = data.split('_')
@@ -665,7 +672,7 @@ def all_callback_query_handler(call):
                                        int(creat_bot_data[id]['FEE_PAID']),
                                        creat_bot_data[id]['run_server'],
                                        'no')
-            sale_id = take_random_karckter()
+            sale_id = take_random_karakter()
             add_sale(sale_id, id)
             add_sale_row(sale_id, project_id)
             user_step_creat_bot.pop(id, None)
@@ -716,11 +723,16 @@ def all_callback_query_handler(call):
     elif data == 'my_bots':
         markup = InlineKeyboardMarkup()
         ids = get_sale_id_b_cid(cid)
-        for uid in ids:
-            markup.add(InlineKeyboardButton(uid, callback_data=f'bot data_{uid}'))
-        markup.add(InlineKeyboardButton(texts['back'], callback_data='back_mybots'))
-        bot.edit_message_text(texts['my_bots_list'], cid, mid)
-        bot.edit_message_reply_markup(cid, mid, reply_markup=markup)
+        print(ids)
+        if ids != []:       
+            for uid in ids:
+                markup.add(InlineKeyboardButton(uid, callback_data=f'bot data_{uid}'))
+            markup.add(InlineKeyboardButton(texts['back'], callback_data='back_mybots'))
+            bot.edit_message_text(texts['my_bots_list'], cid, mid)
+            bot.edit_message_reply_markup(cid, mid, reply_markup=markup)
+        else:
+            markup.add(InlineKeyboardButton(texts['back'], callback_data='back_mybots'))
+            bot.edit_message_text('رباتی برای شما ثبت نشده',cid,mid,reply_markup=markup)
 
     elif data.startswith('bot data'):
         _, id = data.split('_')
@@ -839,6 +851,8 @@ def all_callback_query_handler(call):
         _, customer_id = data.split('_')
         came_customer_black_list(customer_id,1)
         bot.send_message(cid, texts['user_unbanned_success'])
+        bot.send_message(customer_id,texts['unbanned_message'])
+        find_spam_data.pop(customer_id)
         logging.info(f"Admin manually unbanned user {customer_id}.")
 
     elif data.startswith('delete customer'):
@@ -907,14 +921,14 @@ def check_find_spam_status(warning_1=60 * 15, warning_2=3600, sleep_time=60):
         for cid in get_black_list_list():
             data = get_customer_black(cid) 
             if data['STAGE'] == 1 and data['DON'] == 'no':
-                if int(now - data['TIME']) > warning_1:
+                if int(now - data['TIME']) >= warning_1:
                     came_customer_black_list(cid,1)
                     bot.send_message(cid, texts['unbanned_message'])
                     find_spam_data.pop(cid)                   
                     logging.info(f"User {cid} has been auto-unbanned from Stage 1 spam restrictions.")
 
             elif data['STAGE'] == 2 and data['DON'] == 'no':
-                if int(now - data['TIME']) > warning_2:
+                if int(now - data['TIME']) >= warning_2:
                     came_customer_black_list(cid,2)
                     find_spam_data.pop(cid)
                     logging.info(f"User {cid} has been auto-unbanned from Stage 2 spam restrictions.")
