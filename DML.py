@@ -237,5 +237,3 @@ def purge_customer_entirely(customer_id: Union[int, str]) -> bool:
             cur.close()
             conn.close()
             logging.info("🔌 اتصال به دیتابیس بسته شد.")
-
-add_sale_row('h',1)
