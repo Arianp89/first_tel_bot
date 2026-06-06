@@ -56,6 +56,17 @@ def get_product_id_f_sale_row(sale_id):
     return data
 
 
+
+def get_product_data_f_sale_row(sale_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM SALE_ROW WHERE SALE_ID=%s", (sale_id,))
+    data = cur.fetchone()
+    conn.close()
+    cur.close()
+    return data
+
+
 def get_product_data(product_id):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor(dictionary=True)
