@@ -157,39 +157,85 @@ def register_user(cid,name):
     cur.close()
     conn.close()
 
+from mysql.connector import errorcode
+from typing import Union
 
-def delete_customer(cid):
-    conn = mysql.connector.connect(
-        **db_confing,
-        database=database_name
-    )
-    cur = conn.cursor()
-
+def purge_customer_entirely(customer_id: Union[int, str]) -> bool:
+    """
+    یک عملیات اتمیک (All-or-Nothing) برای حذف کامل یک مشتری و تمام وابستگی‌های آن.
+    مراحل: حذف SALE_ROW -> حذف SALE -> حذف BLACK_LIST -> حذف CUSTOMER
+    """
+    
+    conn = None
     try:
-        # حذف مشتری از لیست سیاه (در صورت وجود)
-        cur.execute(
-            "DELETE FROM BLACK_LIST WHERE CUSTOMER_ID = %s",
-            (cid,)
-        )
+        # ایجاد اتصال
+        conn = mysql.connector.connect(**db_confing, database=database_name)
+        # غیرفعال کردن Autocommit برای مدیریت دستی تراکنش (بسیار مهم)
+        conn.autocommit = False 
+        cur = conn.cursor()
 
-        # حذف تمام خریدهای مشتری
-        cur.execute(
-            "DELETE FROM SALE WHERE CUSTOMER_ID = %s",
-            (cid,)
-        )
+        logging.warning(f"⚠️ شروع عملیات پاکسازی کامل برای مشتری: {customer_id}")
 
-        # حذف خود مشتری
-        cur.execute(
-            "DELETE FROM CUSTOMER WHERE ID = %s",
-            (cid,)
-        )
+        # مرحله 1: حذف تمام جزئیات فاکتورهای این مشتری (SALE_ROW)
+        # اول باید بدانیم این مشتری چه فاکتورهایی داشته، سپس ردیف‌های آن فاکتورها را حذف می‌کنیم
+        # نکته: اگر در SALE_ROW مستقیماً customer_id نداری، باید از طریق جدول SALE عمل کنی.
+        # اینجا فرض می‌کنیم در SALE_ROW ستونی به نام sale_id داریم که به جدول SALE وصل است.
+        
+        # ابتدا شناسه‌های فروش (Sale IDs) متعلق به این مشتری را می‌گیریم
+        cur.execute("SELECT ID FROM SALE WHERE CUSTOMER_ID = %s", (customer_id,))
+        sale_ids = [row[0] for row in cur.fetchall()]
 
+        if sale_ids:
+            # حذف ردیف‌های مربوط به تمام فاکتورهای این مشتری
+            format_strings = ','.join(['%s'] * len(sale_ids))
+            query_rows = f"DELETE FROM SALE_ROW WHERE SALE_ID IN ({format_strings})"
+            cur.execute(query_rows, tuple(sale_ids))
+            logging.info(f"✅ {cur.rowcount} ردیف از SALE_ROW پاکسازی شد.")
+
+        # مرحله 2: حذف خودِ رکورد فاکتورها از جدول SALE
+        cur.execute("DELETE FROM SALE WHERE CUSTOMER_ID = %s", (customer_id,))
+        logging.info(f"✅ {cur.rowcount} رکورد از SALE پاکسازی شد.")
+
+        # مرحله 3: حذف مشتری از لیست سیاه (BLACK_LIST)
+        cur.execute("DELETE FROM BLACK_LIST WHERE CUSTOMER_ID = %s", (customer_id,))
+        logging.info(f"✅ ردیف مربوطه از BLACK_LIST پاکسازی شد.")
+
+        # مرحله 4: حذف خودِ مشتری از جدول اصلی CUSTOMER
+        cur.execute("DELETE FROM CUSTOMER WHERE ID = %s", (customer_id,))
+        
+        if cur.rowcount == 0:
+            logging.error(f"❌ خطا: مشتری با شناسه {customer_id} یافت نشد. هیچ تغییری اعمال نشد.")
+            conn.rollback()
+            return False
+
+        # اگر همه مراحل بدون خطا انجام شد، تمام تغییرات را یکجا ذخیره کن
         conn.commit()
+        logging.info(f"🔥 عملیات پاکسازی با موفقیت انجام شد. مشتری {customer_id} به طور کامل حذف شد.")
+        return True
 
     except mysql.connector.Error as err:
-        conn.rollback()
-        logging.error(f"خطای پایگاه داده: {err}")
+        # اگر هر خطایی در هر مرحله رخ دهد، تمام تغییرات تا این لحظه کنسل می‌شود (Rollback)
+        if conn:
+            conn.rollback()
+        
+        if err.errno == errorcode.ER_LOCK_WAIT_TIMEOUT:
+            logging.error("❌ خطای زمان انتظار برای قفل شدن رکورد (Lock Timeout).")
+        elif err.errno == errorcode.ER_ROW_IS_REFERENCED_2:
+            logging.error("❌ خطا: این مشتری توسط جدول دیگری در حال استفاده است (Constraint Violation).")
+        else:
+            logging.error(f"❌ خطای دیتابیس: {err}")
+        return False
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logging.error(f"❌ خطای سیستمی غیرمنتظره: {e}")
+        return False
 
     finally:
-        cur.close()
-        conn.close()
+        if conn and conn.is_connected():
+            cur.close()
+            conn.close()
+            logging.info("🔌 اتصال به دیتابیس بسته شد.")
+
+add_sale_row('h',1)
