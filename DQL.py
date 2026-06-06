@@ -1,5 +1,4 @@
 import mysql.connector
-import datetime,time
 from confing import db_confing,database_name
 
 
