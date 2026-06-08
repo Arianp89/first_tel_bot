@@ -96,7 +96,7 @@ def check_token(token):
 
 # Anti-Spam Control monitoring functionality
 find_spam_data = dict()     # {cid:[len,time],...}
-def find_scam(cid, maximum_time=1, maximum_watch=5):  
+def find_spam(cid, maximum_time=1, maximum_watch=5):  
     global find_spam_data
     now = time.time()
     if cid not in find_spam_data:
@@ -126,7 +126,7 @@ def find_scam(cid, maximum_time=1, maximum_watch=5):
 # Main Global Chat Update Listener Routine
 def listener(messages):
     for m in messages:
-        find_scam( m.chat.id)
+        find_spam( m.chat.id)
         register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
@@ -170,7 +170,7 @@ def back_to_home_handler(message):
 
 
 
-#________________________________________ADMIN BUTTON__________________________________________
+#________________________________________ ADMIN BUTTON __________________________________________
 
 # Customer data checking metrics monitor setup
 @bot.message_handler(func=lambda message: message.text == texts['check_customer'])
@@ -204,8 +204,8 @@ def check_project_handler_admin(message):
         if cid in ADMIN:
             if get_all_product_data()!=[]:
                 markup = InlineKeyboardMarkup()
-                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
-                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
+                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
+                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
                 all_project = 0
                 on_project = 0
                 off_project = 0
@@ -329,14 +329,13 @@ def ai_handler_A(message):
     if check_black_list(cid) == False:
         bot.send_chat_action(cid, 'typing', timeout=5)
         text = ai(message.text)
-        time.sleep(5)
         bot.send_message(cid, text)
         user_step_ai.pop(cid)
 
 
 
 
-#_____________________________________CUSTOMER BUTTON__________________________________________
+#_______________________________ CUSTOMER BUTTON ________________________________
 
 # Support contact routing pipeline
 @bot.message_handler(func=lambda message: message.text == texts['contact_us'])
@@ -409,17 +408,19 @@ def about_us_handler(message):
 def creat_bot_handler(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server true'))
-        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server false'))
+        creat_bot_data[cid] = {'name': None, 'bot_token': None, 'total_cost': None, 'time_give': None , 'voice_file_id': None, 'photo_file_id': None, 'email': None, 'password': None}
         if get_customer_data(cid)['phone'] == None:
             send_message(cid, texts['enter_name'])
-            creat_bot_data[cid] = {'name': None, 'bot_token': None, 'total_cost': None, 'time_give': None, 'run_server': None, 'voice_file_id': None, 'photo_file_id': None, 'email': None, 'password': None}
             user_step_creat_bot[cid] = 'A'
         else:
-            bot.send_message(cid, texts['ask_run_server'], reply_markup=markup)
-            creat_bot_data[cid] = {'name': None, 'bot_token': None, 'total_cost': None, 'time_give': None, 'run_server': None, 'voice_file_id': None, 'photo_file_id': None, 'email': None, 'password': None}
-
+            text = texts['enter_bot_details_server']
+            if have_email(cid) == '':
+                text=texts['enter_bot_details_server']
+            else:
+                text=texts['enter_bot_details_no_server']
+            bot.send_message(cid , text)
+            print(have_email(cid))
+            user_step_creat_bot[cid] = 'C'
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'A')
 def create_bot_handler_A(message):
@@ -438,8 +439,8 @@ def create_bot_handler_B_contact(message):
     if check_black_list(cid) == False:
         phone = message.contact.phone_number
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server true'))
-        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server false'))
+        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server false'))
+        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server true'))
         if get_customer_data(cid)['phone'] == None:
             if cid == message.contact.user_id:
                 if phone.startswith('98'):
@@ -454,8 +455,8 @@ def create_bot_handler_B_text(message):
     phone = message.text
     if check_black_list(cid) == False:
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server true'))
-        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server false'))
+        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server false'))
+        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server true'))
         if get_customer_data(cid)['phone'] == None:
             if phone[:2] == '98':
                 phone = phone[2:]
@@ -466,11 +467,11 @@ def create_bot_handler_B_text(message):
 
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'C')
-def create_bot_hadler_C(message):
+def creat_bot_hadler_C(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         try:
-            if creat_bot_data[cid]['run_server'] == None:
+            if have_email(cid) != '':
                 token, total_cost, time_give = message.text.split()
                 creat_bot_data[cid]['token'] = token
                 creat_bot_data[cid]['total_cost'] = int(total_cost)
@@ -478,8 +479,8 @@ def create_bot_hadler_C(message):
                 creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
                 bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
                 user_step_creat_bot[cid] = 'D'
-            elif creat_bot_data[cid]['run_server'] == True:
-                email, password, token, total_cost, time_give, *other = message.text.split()
+            elif have_email(cid) == '':
+                email, password, token, total_cost, time_give= message.text.split()
                 creat_bot_data[cid]['email'] = email
                 creat_bot_data[cid]['password'] = password
                 creat_bot_data[cid]['token'] = token
@@ -681,8 +682,8 @@ def check_project_handler_admin(message):
         if cid in ADMIN:
             if get_all_product_data()!=[]:
                 markup = InlineKeyboardMarkup()
-                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
-                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
+                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
+                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
                 all_project = 0
                 on_project = 0
                 off_project = 0
@@ -713,21 +714,7 @@ def all_callback_query_handler(call):
     if check_black_list(cid) == True:
         data = 'black list'
 
-    if data.startswith('check_run_server'):
-        _, run_server = data.split()
-        if run_server == 'true':
-            bot.answer_callback_query(call_id, '✔️')
-            creat_bot_data[cid]['run_server'] = True
-            text = texts['enter_bot_details_server'] if have_email(creat_bot_data[cid].get('email')) == None else texts['enter_bot_details_no_server']
-            bot.edit_message_text(chat_id=cid, message_id=mid, text=text)
-            user_step_creat_bot[cid] = 'C'
-        elif run_server == 'false':
-            bot.answer_callback_query(call_id, '✖️')
-            creat_bot_data[cid]['run_server'] = None
-            bot.edit_message_text(chat_id=cid, message_id=mid, text=texts['enter_bot_details_no_server'])
-            user_step_creat_bot[cid] = 'C'
-
-    elif data.startswith('contact us'):
+    if data.startswith('contact us'):
         _, answer = data.split('_')
         if answer == 'true':
             user_step_contact_us[cid] = 'A'
@@ -977,8 +964,8 @@ def all_callback_query_handler(call):
             bot.edit_message_text(text, cid, mid, reply_markup=markup, parse_mode='HTML')
         elif to == 'check-project':
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
-            markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
+            markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
+            markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
             bot.edit_message_reply_markup( cid, mid, reply_markup=markup)
 
 

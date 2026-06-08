@@ -134,15 +134,15 @@ def get_customer_id(sale_id):
     conn.close()
     return data['CUSTOMER_ID']
 
-def have_email(email):
+def have_email(customer_id):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor(dictionary=True) 
-    SQL_Query = "SELECT * FROM customer  WHERE EMAIL=%s;"
-    cur.execute(SQL_Query,(email,))
+    SQL_Query = "SELECT EMAIL FROM CUSTOMER  WHERE ID=%s;"
+    cur.execute(SQL_Query,(customer_id,))
     data = cur.fetchone()
     cur.close()
     conn.close()
-    return data
+    return data['EMAIL']
 
 
 
