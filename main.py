@@ -769,8 +769,8 @@ def all_callback_query_handler(call):
             bot.send_message(customer_id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
         elif call_data == 'false':
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['btn_wrong_amount'], callback_data=f'entered_wrong {id}'))
-            markup.add(InlineKeyboardButton(texts['btn_not_receipt'], callback_data=f'photo_not_receipt {id}'))
+            markup.add(InlineKeyboardButton(texts['btn_wrong_amount'], callback_data=f'entered_wrong {customer_id}'))
+            markup.add(InlineKeyboardButton(texts['btn_not_receipt'], callback_data=f'photo_not_receipt {customer_id}'))
             bot.send_message(cid, texts['ask_reject_reason'], reply_markup=markup)
             bot.answer_callback_query(call_id, '✖️')
         bot.delete_message(cid, mid)
