@@ -1,4 +1,3 @@
-from DQL import get_sale_id
 
 texts = {
     # --- دکمه‌های اصلی ---
@@ -72,15 +71,15 @@ texts = {
     'btn_send_phone': '📱 ارسال شماره تلفن',
     'ask_send_phone': '✉ لطفا پیام  خود را وارد کنید:',
     'info_saved_success': '✅ اطلاعات شما با موفقیت ثبت شد.',
-    'project_stats_admin': '📊 <b>آمار پروژه‌ها:</b>\n\n🔹 کل پروژه‌ها: {all_project}\n🟢 پروژه‌های فعال: {on_project}\n🔴 پروژه‌های انجام شده: {off_project}',
+    'project_stats_admin': '📊 <b>آمار پروژه‌ها:</b>\n🔹 کل پروژه‌ها: {all_project}\n🟢 پروژه‌های فعال: {on_project}\n🔴 پروژه‌های انجام شده: {off_project}',
     'missing_file_projects': '📁 لطفاً پروژه مورد نظر برای ارسال سورس را انتخاب کنید:',
     'no_active_projects': '⚠️ هیچ پروژه فعالی ندارید.',
     'file_link_saved': '✅ لینک گیت‌هاب با موفقیت ذخیره شد.',
     'file_send_error': '❌ خطایی در ذخیره لینک پروژه رخ داد!',
     'admin_choose_menu': ' ادمین گرامی، لطفاً منوی مورد نظر را انتخاب کنید:',
-    'broadcast_finished': '✅ ارسال همگانی تمام شد\n\n📤 موفق: {successful}\n❌ ناموفق: {unsuccessful}',
+    'broadcast_finished': '✅ ارسال همگانی تمام شد\n📤 موفق: {successful}\n❌ ناموفق: {unsuccessful}',
     'message_sent_success': '✅ پیام با موفقیت برای کاربر ارسال شد.',
-    'customer_stats_admin': '👥 <b>آمار کاربران:</b>\n\n📊 تعداد کل کاربران: {customer_num}\n🚫 تعداد کاربران مسدود شده: {yes_black_list}\n🟢 تعداد کاربران مسدود نشده: {no_black_list}',
+    'customer_stats_admin': '👥 <b>آمار کاربران:</b>\n📊 تعداد کل کاربران: {customer_num}\n🚫 تعداد کاربران مسدود شده: {yes_black_list}\n🟢 تعداد کاربران مسدود نشده: {no_black_list}',
     'btn_view_customers': '👥 مشاهده کاربران',
     'ask_reject_reason': '❓ چرا این کاربر تایید نشد؟',
     'btn_wrong_amount': '💳 مبلغ وارد شده اشتباه بود',
