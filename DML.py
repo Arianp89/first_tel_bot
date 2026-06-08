@@ -118,18 +118,18 @@ def change_product_status(status,product_id):
 
 
 
-def add_customer_black_list(customer_id,time,stage=1,don='no'):
+def add_customer_black_list(customer_id,time,stage=1,don='false'):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor()
     cur.execute("SELECT * FROM BLACK_LIST WHERE CUSTOMER_ID=%s", (customer_id,))
     user = cur.fetchone()
     if user==None:
         SQL_Query ="INSERT INTO BLACK_LIST (customer_id,STATUS,STAGE,DON,TIME) VALUES (%s,%s,%s,%s,%s);"
-        cur.execute(SQL_Query, (customer_id,'yes',stage,don,time))
+        cur.execute(SQL_Query, (customer_id,'true',stage,don,time))
         conn.commit()
     else:
         SQL_Query = "UPDATE BLACK_LIST SET STATUS=%s,STAGE=%s,DON=%s,TIME=%s WHERE CUSTOMER_ID=%s;"
-        cur.execute(SQL_Query, ('yes',stage,don,time,customer_id))
+        cur.execute(SQL_Query, ('true',stage,don,time,customer_id))
         conn.commit()
     cur.close()
     conn.close()
@@ -138,7 +138,7 @@ def came_customer_black_list(customer_id,stage):
     conn = mysql.connector.connect(**db_confing, database=database_name)
     cur = conn.cursor()
     SQL_Query = "UPDATE BLACK_LIST SET STATUS=%s,STAGE=%s,DON=%s WHERE CUSTOMER_ID=%s;"
-    cur.execute(SQL_Query, ('no',stage,'yes',customer_id))
+    cur.execute(SQL_Query, ('false',stage,'true',customer_id))
     conn.commit()
     cur.close()
     conn.close()

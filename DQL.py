@@ -156,7 +156,7 @@ def check_black_list(CUSTOMER_ID):
     conn.close()
     if data==None:
         return False
-    if data['STATUS']=='yes':
+    if data['STATUS']=='true':
         return True
     return False
 
