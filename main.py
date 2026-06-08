@@ -1,4 +1,4 @@
-from confing import ai_token, proxy_2, proxy_1, API_TOKEN, ADMIN
+from config import ai_token, proxy_2, proxy_1, API_TOKEN, ADMIN
 from DQL import *
 from DML import *
 # from requests_forwarder import setup_proxy

@@ -1,6 +1,6 @@
 import logging
 import mysql.connector
-from confing import *
+from config import *
 
 
 

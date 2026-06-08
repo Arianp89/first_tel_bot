@@ -1,5 +1,5 @@
 import mysql.connector
-from confing import db_confing,database_name
+from config import db_confing,database_name
 
 
 def get_customer_data(user_id):

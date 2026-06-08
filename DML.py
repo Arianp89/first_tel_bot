@@ -2,7 +2,7 @@ import mysql.connector
 import logging
 import string
 import random
-from confing import db_confing,database_name
+from config import db_confing,database_name
 
 
 def take_random_karakter():
