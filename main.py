@@ -157,6 +157,187 @@ def message_start_handler(message):
             bot.send_message(cid, texts['user_welcome'], reply_markup=customer_markup())
 
 
+# Navigation back processing menu
+@bot.message_handler(func=lambda message: message.text == texts['go_home'])
+def back_to_home_handler(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        if cid in user_step_creat_bot:
+            user_step_creat_bot.pop(cid)
+        bot.send_message(cid, texts['choose_from_menu'], reply_markup=customer_markup())
+
+
+
+
+
+#________________________________________ADMIN BUTTON__________________________________________
+
+# Customer data checking metrics monitor setup
+@bot.message_handler(func=lambda message: message.text == texts['check_customer'])
+def check_customer_handler(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        customer_num = 0
+        in_black_list = 0
+        notin_black_list = 0
+        for i in get_all_customer_data():
+            customer_num += 1
+            if get_customer_black(i['ID']) !=None:
+                if get_customer_black(i['ID'])['STATUS'] == 'true':
+                    in_black_list += 1
+                else:
+                    notin_black_list += 1
+            else:
+                no_black_list += 1
+        text = texts['customer_stats_admin'].format(customer_num=customer_num, yes_black_list=in_black_list, no_black_list=notin_black_list)
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(texts['btn_view_customers'], callback_data='customer_data'))
+        bot.send_message(cid, text, reply_markup=markup)     
+
+
+
+# Project metrics analytical dashboard inside internal Admin panel 
+@bot.message_handler(func=lambda message: message.text == texts['check_project'])
+def check_project_handler_admin(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        if cid in ADMIN:
+            if get_all_product_data()!=[]:
+                markup = InlineKeyboardMarkup()
+                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='projects_on'))
+                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='projects_off'))
+                all_project = 0
+                on_project = 0
+                off_project = 0
+                for project in get_all_product_data():
+                    all_project += 1
+                    if project['STATUS'] == 'false':
+                        on_project += 1
+                    else:
+                        off_project += 1
+                text = texts['project_stats_admin'].format(all_project=all_project, on_project=on_project, off_project=off_project)
+                bot.send_message(cid, text, reply_markup=markup)
+            else:
+                bot.send_message(cid,texts['no_active_projects'])
+        else:
+            send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
+
+
+
+
+# Broadcasting execution strategy configuration 
+@bot.message_handler(func=lambda message: message.text == texts['send_message_to_customer'])
+def admin_send_file_to_customer_handler(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(texts['send_to_all'], callback_data='send file_all'))
+        markup.add(InlineKeyboardButton(texts['send_to_one'], callback_data="send file_one"))
+        bot.send_message(cid, texts['admin_choose_menu'], reply_markup=markup)
+    
+
+@bot.message_handler(func=lambda message: admin_send_message_to_customer.get(message.chat.id) in ['A', 'B'])
+def admin_send_message_to_customer_handler_A_B(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        step = admin_send_message_to_customer.get(cid)
+        if step == 'A':
+            number = 0
+            unsuccessful = 0
+            successful = 0
+            for i in get_all_customer_data():
+                number += 1
+                if number % 20 == 0: time.sleep(2)
+                try:
+                    bot.send_message(i['ID'], message.text)
+                    successful += 1
+                except:
+                    unsuccessful += 1
+            text = texts['broadcast_finished'].format(successful=successful, unsuccessful=unsuccessful)
+            bot.send_message(cid, text)
+        elif step == 'B':
+            customer_id = admin_send_message_to_customer_data[cid]
+            bot.send_message(customer_id, message.text)
+            bot.send_message(cid, texts['message_sent_success'])
+        admin_send_message_to_customer.pop(cid)
+
+
+
+@bot.message_handler(func=lambda message: message.text == texts['send_location_file'])
+def send_location_file_handler(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        if cid in ADMIN:
+            false = 0
+            for i in get_all_product_data():
+                if i['STATUS'] == 'false':
+                    false += 1
+            if false != 0:
+                markup = InlineKeyboardMarkup()
+                for i in get_sale_row_data():
+                    product_id = get_product_id_f_sale_row(i)
+                    product_data = get_product_data(product_id['PRODUCT_ID'])
+                    if product_data != None:
+                        if product_data['STATUS'] == 'false':
+                            markup.add(InlineKeyboardButton(f"{i}", callback_data=f"send-lcn-file_{i}"))
+                bot.send_message(cid, texts['missing_file_projects'], reply_markup=markup)
+            else:
+                bot.send_message(cid, texts['no_active_projects'])
+        else:
+            send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
+
+
+@bot.message_handler(func=lambda message: admin_step_send_location_file.get(message.chat.id) == 'A')
+def send_location_file_handler_A(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        try:
+            sale_id = admin_send_location_data[cid]
+            github_id = message.text
+            add_file_project(github_id, get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
+            change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
+            bot.send_message(cid, texts['file_link_saved'])
+            customer_id = get_customer_id(sale_id)
+            admin_step_send_location_file[customer_id]
+            text=f""" کاربر:{get_customer_data(customer_id)}
+پروژه شما با کد:{sale_id} با موفقیت تمام شد لطفا مابقی مبلغ یعنی {get_product_data_f_sale_row(sale_id)} را به ارین پناهی واریز کنید
+"""
+            bot.send_message(int(customer_id), text , reply_markup=customer_markup())
+        except Exception as e:
+            bot.send_message(cid, texts['file_send_error'])
+            logging.error(f'error in send location file: {e}')
+        admin_step_send_location_file.pop(cid)
+        admin_send_location_data.pop(cid)
+
+
+
+# Admin AI workspace route entry point
+@bot.message_handler(func=lambda message: message.text == texts['ai_for_admin'])
+def ai_handler(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        if cid in ADMIN:
+            bot.send_message(cid, texts['enter_ai_prompt'])
+            user_step_ai[cid] = 'A'
+        else:
+            send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
+
+
+@bot.message_handler(func=lambda message: user_step_ai.get(message.chat.id) == 'A')
+def ai_handler_A(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        bot.send_chat_action(cid, 'typing', timeout=5)
+        text = ai(message.text)
+        time.sleep(5)
+        bot.send_message(cid, text)
+        user_step_ai.pop(cid)
+
+
+
+
+#_____________________________________CUSTOMER BUTTON__________________________________________
+
 # Support contact routing pipeline
 @bot.message_handler(func=lambda message: message.text == texts['contact_us'])
 def message_contact_us_handler(message):
@@ -216,37 +397,8 @@ def about_us_handler(message):
         else:
             bot.send_message(cid,'این دکمه فعلا خاموش است')
 
-# Navigation back processing menu
-@bot.message_handler(func=lambda message: message.text == texts['go_home'])
-def back_to_home_handler(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        if cid in user_step_creat_bot:
-            user_step_creat_bot.pop(cid)
-        bot.send_message(cid, texts['choose_from_menu'], reply_markup=customer_markup())
 
 
-# Admin AI workspace route entry point
-@bot.message_handler(func=lambda message: message.text == texts['ai_for_admin'])
-def ai_handler(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        if cid in ADMIN:
-            bot.send_message(cid, texts['enter_ai_prompt'])
-            user_step_ai[cid] = 'A'
-        else:
-            send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
-
-
-@bot.message_handler(func=lambda message: user_step_ai.get(message.chat.id) == 'A')
-def ai_handler_A(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        bot.send_chat_action(cid, 'typing', timeout=5)
-        text = ai(message.text)
-        time.sleep(5)
-        bot.send_message(cid, text)
-        user_step_ai.pop(cid)
 
 
 # Registration order setup wizard workflow 
@@ -398,6 +550,26 @@ def user_step_create_bot_handler_F(message):
         user_step_creat_bot.pop(id, None)
         creat_bot_data.pop(id, None)
         bot.send_message(id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
+
+
+
+@bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'G',
+                     content_types=['photo'])
+def user_step_creat_bot_handler_G(message):
+    cid = message.chat.id
+    if check_black_list(cid) == False:
+        file_id = message.photo[-1].file_id
+        creat_bot_data[cid]['photo_file_id'] = file_id
+        bot.send_message(cid, texts['photo_sent_to_admin'])
+        for ad in ADMIN:
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-deposit_true_{cid}'),
+                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-deposit_false_{cid}'))
+            text = texts['admin_payment_received'].format(name=get_customer_data(cid)['name'], amount=creat_bot_data[cid]['total_cost'] / 2)
+            bot.send_photo(ad, file_id, text, reply_markup=markup)
+
+
+
 # Profile execution and handling management
 @bot.message_handler(func=lambda message: message.text == texts['profile'])
 def profile_handler(message):
@@ -503,130 +675,6 @@ def check_project_handler_admin(message):
             send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
 
 
-@bot.message_handler(func=lambda message: message.text == texts['send_location_file'])
-def send_location_file_handler(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        if cid in ADMIN:
-            false = 0
-            for i in get_all_product_data():
-                if i['STATUS'] == 'false':
-                    false += 1
-            if false != 0:
-                markup = InlineKeyboardMarkup()
-                for i in get_sale_row_data():
-                    product_id = get_product_id_f_sale_row(i)
-                    product_data = get_product_data(product_id['PRODUCT_ID'])
-                    if product_data != None:
-                        if product_data['STATUS'] == 'false':
-                            markup.add(InlineKeyboardButton(f"{i}", callback_data=f"send-lcn-file_{i}"))
-                bot.send_message(cid, texts['missing_file_projects'], reply_markup=markup)
-            else:
-                bot.send_message(cid, texts['no_active_projects'])
-        else:
-            send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
-
-
-@bot.message_handler(func=lambda message: admin_step_send_location_file.get(message.chat.id) == 'A')
-def send_location_file_handler_A(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        try:
-            sale_id = admin_send_location_data[cid]
-            github_id = message.text
-            add_file_project(github_id, get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
-            change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
-            bot.send_message(cid, texts['file_link_saved'])
-            customer_id = get_customer_id(sale_id)
-            admin_step_send_location_file[customer_id]
-            text=f""" کاربر:{get_customer_data(customer_id)}
-پروژه شما با کد:{sale_id} با موفقیت تمام شد لطفا مابقی مبلغ یعنی {get_product_data_f_sale_row(sale_id)} را به ارین پناهی واریز کنید
-"""
-            bot.send_message(int(customer_id), text , reply_markup=customer_markup())
-        except Exception as e:
-            bot.send_message(cid, texts['file_send_error'])
-            logging.error(f'error in send location file: {e}')
-        admin_step_send_location_file.pop(cid)
-        admin_send_location_data.pop(cid)
-
-
-
-@bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'E',
-                     content_types=['photo'])
-def send_location_file_handler_B(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        file_id = message.photo[-1].file_id
-        creat_bot_data[cid]['photo_file_id'] = file_id
-        bot.send_message(cid, texts['photo_sent_to_admin'])
-        for ad in ADMIN:
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-deposit_true_{cid}'),
-                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-deposit_false_{cid}'))
-            text = texts['admin_payment_received'].format(name=get_customer_data(cid)['name'], amount=creat_bot_data[cid]['total_cost'] / 2)
-            bot.send_photo(ad, file_id, text, reply_markup=markup)
-
-
-
-# Broadcasting execution strategy configuration 
-@bot.message_handler(func=lambda message: message.text == texts['send_message_to_customer'])
-def admin_send_file_to_customer_handler(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['send_to_all'], callback_data='send file_all'))
-        markup.add(InlineKeyboardButton(texts['send_to_one'], callback_data="send file_one"))
-        bot.send_message(cid, texts['admin_choose_menu'], reply_markup=markup)
-    
-
-@bot.message_handler(func=lambda message: admin_send_message_to_customer.get(message.chat.id) in ['A', 'B'])
-def admin_send_message_to_customer_handler_A_B(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        step = admin_send_message_to_customer.get(cid)
-        if step == 'A':
-            number = 0
-            unsuccessful = 0
-            successful = 0
-            for i in get_all_customer_data():
-                number += 1
-                if number % 20 == 0: time.sleep(2)
-                try:
-                    bot.send_message(i['ID'], message.text)
-                    successful += 1
-                except:
-                    unsuccessful += 1
-            text = texts['broadcast_finished'].format(successful=successful, unsuccessful=unsuccessful)
-            bot.send_message(cid, text)
-        elif step == 'B':
-            customer_id = admin_send_message_to_customer_data[cid]
-            bot.send_message(customer_id, message.text)
-            bot.send_message(cid, texts['message_sent_success'])
-        admin_send_message_to_customer.pop(cid)
-
-
-# Customer data checking metrics monitor setup
-@bot.message_handler(func=lambda message: message.text == texts['check_customer'])
-def check_customer_handler(message):
-    cid = message.chat.id
-    if check_black_list(cid) == False:
-        customer_num = 0
-        in_black_list = 0
-        notin_black_list = 0
-        for i in get_all_customer_data():
-            customer_num += 1
-            if get_customer_black(i['ID']) !=None:
-                print(1,'ok')
-                if get_customer_black(i['ID'])['STATUS'] == 'true':
-                    in_black_list += 1
-                else:
-                    notin_black_list += 1
-            else:
-                no_black_list += 1
-        text = texts['customer_stats_admin'].format(customer_num=customer_num, yes_black_list=in_black_list, no_black_list=notin_black_list)
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['btn_view_customers'], callback_data='customer_data'))
-        bot.send_message(cid, text, reply_markup=markup)
 
 
 # Callback handling dispatcher routine interface 
@@ -720,7 +768,7 @@ def all_callback_query_handler(call):
 
     elif data.startswith('photo_not_receipt'):
         _, customer_id = data.split()
-        user_step_creat_bot[customer_id] = 'E'
+        user_step_creat_bot[customer_id] = 'G'
         bot.send_message(customer_id, texts['err_invalid_receipt'])
         bot.edit_message_text(texts['msg_sent_to_user_notif'], cid, mid)
 
@@ -917,6 +965,10 @@ def all_message_handler(message):
             send_message(cid, texts['invalid_command'], reply_markup=customer_markup())
 
 
+
+
+#_______________________________________thread___________________________________________
+
 # Thread tracking function to check deadline registrations daily
 def check_time(day, sleep):
     bans_time = []
@@ -965,6 +1017,9 @@ def check_find_spam_status(warning_1=60 * 15, warning_2=3600, sleep_time=60):
 
 t2 = threading.Thread(target=check_find_spam_status, args=())
 t2.start()
+
+
+#_____________________________________polling____________________________________________
 
 # Operational startup setup polling 
 print('System is running...')
