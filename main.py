@@ -96,7 +96,7 @@ def check_token(token):
 
 # Anti-Spam Control monitoring functionality
 find_spam_data = dict()     # {cid:[len,time],...}
-def find_scam(cid, maximum_time, maximum_watch):  
+def find_scam(cid, maximum_time=1, maximum_watch=5):  
     global find_spam_data
     now = time.time()
     if cid not in find_spam_data:
@@ -126,7 +126,7 @@ def find_scam(cid, maximum_time, maximum_watch):
 # Main Global Chat Update Listener Routine
 def listener(messages):
     for m in messages:
-        find_scam( m.chat.id , 1 , 10 )
+        find_scam( m.chat.id)
         register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
