@@ -188,7 +188,7 @@ def check_customer_handler(message):
                 else:
                     notin_black_list += 1
             else:
-                no_black_list += 1
+                notin_black_list += 1
         text = texts['customer_stats_admin'].format(customer_num=customer_num, yes_black_list=in_black_list, no_black_list=notin_black_list)
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(texts['btn_view_customers'], callback_data='customer_data'))
@@ -383,16 +383,19 @@ def about_us_handler(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         number = 0
-        text = texts['bot_list_header']
         for token in get_all_token():
             number += 1
-            try:
-                check_res = check_token(token)
-            except:
-                logging.error('have error to check token in adout_us button')
-            if check_res:
-                text += f"{number}: @{check_res[1]}\n"
         if number >= 5:
+            number = 0
+            text = texts['bot_list_header']
+            for token in get_all_token():
+                number += 1
+                try:
+                    check_res = check_token(token)
+                except:
+                    logging.error('have error to check token in adout_us button')
+                if check_res:
+                    text += f"{number}: @{check_res[1]}\n"
             send_message(cid, text)
         else:
             bot.send_message(cid,'این دکمه فعلا خاموش است')
@@ -596,6 +599,9 @@ def profile_handler(message):
 def user_step_profile_A(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
+        if len(message.text) >= 20:
+            bot.send_message(cid,'کاراکتر کمتر از 20 وارد کنید')
+            return
         if get_customer_data(cid)['phone'] != None:
             name=message.text
             edit_customer_name(name, cid)
@@ -614,14 +620,19 @@ def user_step_profile_A(message):
 def user_step_profile_B(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
+        phone_number = message.contact.phone_number
         if get_customer_data(cid)['phone'] != None:
-            phone=message.text
-            edit_customer_phone(phone, cid)
-            text ='شماره تماس شما به  '+ phone +' تغییر کرد '
+            if message.contact.user_id == cid:
+                if phone_number.startswith('98'):
+                    phone_number = phone_number[2:]
+                elif phone_number.startswith('0'):
+                    phone_number = phone_number[1:]
+                edit_customer_phone(phone_number, cid)
+                user_step_profile.pop(cid)
+            text ='شماره تماس شما به  '+ phone_number +' تغییر کرد '
             bot.send_message(cid,text, parse_mode='HTML')
             user_step_profile.pop(cid)
         else:
-            phone_number = message.contact.phone_number
             if message.contact.user_id == cid:
                 if phone_number.startswith('98'):
                     phone_number = phone_number[2:]
@@ -636,16 +647,30 @@ def user_step_profile_B(message):
 def user_step_profile_B_text(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
-        if get_customer_data(cid)['phone'] != None:
-            phone=message.text
+        phone=message.text
+        if phone.startswith('0'):
+            phone = phone[1:]
+        # if len(phone) >= 10:
+        #     bot.send_message(cid,'یک بار دیگه تلاش کنید')
+        #     return
+        try:
+            int(phone)
+        except:
+            bot.send_message(cid,'لطفا عدد وارد کنید')
+            return
+
+        if get_customer_data(cid)['phone'] != None and len(phone) == 10:
             edit_customer_phone(message.text, cid)
             text ='شماره تماس شما به  '+ phone +' تغییر کرد '
             bot.send_message( cid , text )
             user_step_profile.pop(cid)
-        else:
-            edit_customer_phone(message.text, cid)
+        elif len(phone) == 10:
+            edit_customer_phone(phone, cid)
             user_step_profile.pop(cid)
             bot.send_message(cid, texts['info_saved_success'], reply_markup=customer_markup())
+        else:
+             bot.send_message(cid,'یک بار دیگه تلاش کنید')
+
 
 
 # Project metrics analytical dashboard inside internal Admin panel 
@@ -710,9 +735,12 @@ def all_callback_query_handler(call):
             bot.edit_message_text(texts['ask_send_phone'], cid, mid)
         elif answer == 'false':
             bot.answer_callback_query(call_id, '✖️')
-            bot.delete_message(cid, mid)
+            try:
+                bot.delete_message(cid, mid)
+            except:
+                pass
     
-    elif data.startswith('responsecontact'):
+    elif data.startswith('response contact'):
         _, customer_id = data.split('_')
         user_step_contact_us[cid] = 'B'
         contact_us_data[cid] = customer_id
