@@ -86,8 +86,6 @@ def check_token(token):
             return [True, data['result']['username']]
         else:
             print("The token is invalid!")
-            if 'description' in data:
-                print(f"Error: {data['description']}")
             return False
     except Exception as e:
         logging.error(f"An error occurred: {e}")
@@ -103,7 +101,6 @@ def find_spam(cid, maximum_time=1, maximum_watch=5):
         find_spam_data[cid] = [0, time.time()]
     if now - find_spam_data[cid][1] < maximum_time:
         find_spam_data[cid][0] += 1
-        print(find_spam_data[cid][0])
     if find_spam_data[cid][0] % maximum_watch == 0:
         data = get_customer_black(cid)
 
@@ -296,13 +293,14 @@ def send_location_file_handler_A(message):
             github_id = message.text
             add_file_project(github_id, get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
             change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
-            bot.send_message(cid, texts['file_link_saved'])
             customer_id = get_customer_id(sale_id)
-            admin_step_send_location_file[customer_id]
-            text=f""" کاربر:{get_customer_data(customer_id)}
-پروژه شما با کد:{sale_id} با موفقیت تمام شد لطفا مابقی مبلغ یعنی {get_product_data_f_sale_row(sale_id)} را به ارین پناهی واریز کنید
+            product_data = get_product_data(get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
+            user_step_creat_bot[customer_id]='G'
+            text=f""" کاربر:{get_customer_data(customer_id)['name']}
+پروژه شما با کد:{sale_id} با موفقیت تمام شد لطفا مابقی مبلغ یعنی {product_data['TOTAL_COST']-product_data['FEE_PAID']} را به ارین پناهی واریز کنید
 """
             bot.send_message(int(customer_id), text , reply_markup=customer_markup())
+            bot.send_message(cid, texts['file_link_saved'])
         except Exception as e:
             bot.send_message(cid, texts['file_send_error'])
             logging.error(f'error in send location file: {e}')
@@ -413,13 +411,11 @@ def creat_bot_handler(message):
             send_message(cid, texts['enter_name'])
             user_step_creat_bot[cid] = 'A'
         else:
-            text = texts['enter_bot_details_server']
-            if have_email(cid) == '':
-                text=texts['enter_bot_details_server']
-            else:
+            if have_email(cid) != None:
                 text=texts['enter_bot_details_no_server']
-            bot.send_message(cid , text)
-            print(have_email(cid))
+            else:
+                text=texts['enter_bot_details_server']
+            bot.send_message(cid , text , reply_markup=back_creat_bot())
             user_step_creat_bot[cid] = 'C'
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'A')
@@ -438,15 +434,17 @@ def create_bot_handler_B_contact(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         phone = message.contact.phone_number
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server false'))
-        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server true'))
         if get_customer_data(cid)['phone'] == None:
             if cid == message.contact.user_id:
                 if phone.startswith('98'):
                     phone = phone[2:] 
             add_customer(cid, creat_bot_data[cid]['name'], int(phone))
-        bot.send_message(cid, texts['ask_run_server'], reply_markup=markup)
+            if have_email(cid) != None:
+                text=texts['enter_bot_details_no_server']
+            else:
+                text=texts['enter_bot_details_server']
+            bot.send_message(cid , text)
+        user_step_creat_bot[cid]='C'
 
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'B')
@@ -454,48 +452,86 @@ def create_bot_handler_B_text(message):
     cid = message.chat.id
     phone = message.text
     if check_black_list(cid) == False:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['yes'], callback_data='check_run_server false'))
-        markup.add(InlineKeyboardButton(texts['no'], callback_data='check_run_server true'))
         if get_customer_data(cid)['phone'] == None:
             if phone[:2] == '98':
                 phone = phone[2:]
             elif phone[:1] == '0':
                 phone = phone[1:]
             add_customer(cid, creat_bot_data[cid]['name'], int(phone))
-        bot.send_message(cid, texts['ask_run_server'], reply_markup=markup)
+            if have_email(cid) != None:
+                text=texts['enter_bot_details_no_server']
+            else:
+                text=texts['enter_bot_details_server']
+            bot.send_message(cid , text)
+        user_step_creat_bot[cid]='C'
 
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'C')
 def creat_bot_hadler_C(message):
     cid = message.chat.id
-    if check_black_list(cid) == False:
+    data=message.text
+    def check_integer(text):
         try:
-            if have_email(cid) != '':
-                token, total_cost, time_give = message.text.split()
-                creat_bot_data[cid]['token'] = token
-                creat_bot_data[cid]['total_cost'] = int(total_cost)
-                creat_bot_data[cid]['time_give'] = int(time_give)
-                creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
-                bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
-                user_step_creat_bot[cid] = 'D'
-            elif have_email(cid) == '':
-                email, password, token, total_cost, time_give= message.text.split()
-                creat_bot_data[cid]['email'] = email
-                creat_bot_data[cid]['password'] = password
-                creat_bot_data[cid]['token'] = token
-                creat_bot_data[cid]['total_cost'] = int(total_cost)
-                creat_bot_data[cid]['time_give'] = int(time_give)
-                creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
-                add_email_password(cid, email, password) 
-                bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
-                user_step_creat_bot[cid] = 'D'
-            else:
-                bot.send_message(cid, texts['invalid_token_retry'])
-                user_step_creat_bot[cid] = 'B'
-        except Exception as e:
-            logging.error('error to split token')
-            logging.error('error', e)
+            int(text)
+            return True
+        except:
+            return False
+                
+    if check_black_list(cid) == False:
+        if have_email(cid) != None:
+            try:
+                token, total_cost, time_give = data.split()
+            except Exception as e:
+                try:
+                    token, total_cost, time_give =data.split('\n')
+                except Exception as e:
+                    text=texts['enter_bot_details_no_server']
+                    bot.send_message(cid , 'لطفا این موارد را به همین شکل وارد کنید' + '\n' + text)
+            if check_integer(time_give)==False and check_integer(total_cost)==False:
+                bot.send_message(cid , 'مبلغ کل و تاریخ تحویل را به عدد وارد کنید')
+                return
+            elif check_integer(total_cost)==False:
+                bot.send_message(cid , 'مبلغ کل را به عدد وارد کنید')
+                return
+            elif check_integer(time_give)==False:
+                bot.send_message(cid , 'تاریخ تحویل را به عدد وارد کنید')
+                return
+            creat_bot_data[cid]['token'] = token
+            creat_bot_data[cid]['total_cost'] = int(total_cost)
+            creat_bot_data[cid]['time_give'] = int(time_give)
+            creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
+            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
+            user_step_creat_bot[cid] = 'D'
+        elif have_email(cid) == None:
+            try:
+                email, password, token, total_cost, time_give = data.split()
+            except Exception as e:
+                try:
+                    email, password, token, total_cost, time_give= data.split('\n')
+                except Exception as e:
+                    text=texts['enter_bot_details_server']
+                    bot.send_message(cid , 'لطفا این موارد را به همین شکل وارد کنید' + '\n' + text)
+                    return
+            if check_integer(time_give)==False and check_integer(total_cost)==False:
+                bot.send_message(cid , 'مبلغ کل و تاریخ تحویل را به عدد وارد کنید')
+                return
+            elif check_integer(total_cost)==False:
+                bot.send_message(cid , 'مبلغ کل را به عدد وارد کنید')
+                return
+            elif check_integer(time_give)==False:
+                bot.send_message(cid , 'تاریخ تحویل را به عدد وارد کنید')
+                return
+            creat_bot_data[cid]['email'] = email
+            creat_bot_data[cid]['password'] = password
+            creat_bot_data[cid]['token'] = token
+            creat_bot_data[cid]['total_cost'] = int(total_cost)
+            creat_bot_data[cid]['time_give'] = int(time_give)
+            creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
+            add_email_password(cid, email, password) 
+            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
+            user_step_creat_bot[cid] = 'D'
+        else:
+            bot.send_message(cid, texts['invalid_token_retry'])
             user_step_creat_bot[cid] = 'B'
 
 
@@ -546,7 +582,6 @@ def user_step_create_bot_handler_F(message):
                                         int(file_name), 
                                         creat_bot_data[id]['total_cost'],
                                         int(message.text),
-                                        creat_bot_data[id]['run_server'],
                                         'false')
         sale_id = take_random_karakter()
         add_sale(sale_id, id)
@@ -710,9 +745,9 @@ def all_callback_query_handler(call):
     cid = call.message.chat.id
     mid = call.message.message_id
     data = call.data
-    print(f'call={call.message.from_user.first_name} [{cid}]:{data}')
     if check_black_list(cid) == True:
         data = 'black list'
+    print(f'call={call.message.from_user.first_name} [{cid}]:{data}')
 
     if data.startswith('contact us'):
         _, answer = data.split('_')
@@ -759,7 +794,6 @@ def all_callback_query_handler(call):
                                          int(file_name), 
                                          creat_bot_data[customer_id]['total_cost'],
                                          int(creat_bot_data[customer_id]['FEE_PAID']),
-                                         creat_bot_data[customer_id]['run_server'],
                                          'false')
             sale_id = take_random_karakter()
             add_sale(sale_id, customer_id)
@@ -771,6 +805,7 @@ def all_callback_query_handler(call):
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(texts['btn_wrong_amount'], callback_data=f'entered_wrong {customer_id}'))
             markup.add(InlineKeyboardButton(texts['btn_not_receipt'], callback_data=f'photo_not_receipt {customer_id}'))
+            markup.add(InlineKeyboardButton('کامل لغو شود' , callback_data=f'cancel_projrct {customer_id}'))
             bot.send_message(cid, texts['ask_reject_reason'], reply_markup=markup)
             bot.answer_callback_query(call_id, '✖️')
         bot.delete_message(cid, mid)
@@ -786,6 +821,12 @@ def all_callback_query_handler(call):
         user_step_creat_bot[customer_id] = 'G'
         bot.send_message(customer_id, texts['err_invalid_receipt'])
         bot.edit_message_text(texts['msg_sent_to_user_notif'], cid, mid)
+    
+    elif data.startswith('cancel_projrct'):
+        _, customer_id=data.split()
+        user_step_creat_bot.pop(customer_id , None)
+        bot.send_message(customer_id,'پروژه شما به صورت کامل لغو شد' ,reply_markup=customer_markup())
+        bot.send_message(cid , 'پروژه کاربر با موفقیت لغو شد')
 
     elif data == 'change_information':
         markup = InlineKeyboardMarkup()
@@ -826,10 +867,9 @@ def all_callback_query_handler(call):
         _, id = data.split('_')
         product_id = get_product_id_f_sale_row(id)['PRODUCT_ID']
         product_data = get_product_data(product_id)
-        svr = texts['yes'] if product_data['RAN_IN_SERSER'] else texts['no']
         text = texts['bot_data_details'].format(
             id=id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
-            paid=product_data['FEE_PAID'], server=svr
+            paid=product_data['FEE_PAID'], server='no'
         )
         bot.edit_message_text(text, cid, mid, parse_mode='HTML')
 
@@ -848,10 +888,9 @@ def all_callback_query_handler(call):
         _, id = data.split()
         product_id = get_product_id_f_sale_row(id)
         product_data = get_product_data(product_id['PRODUCT_ID'])
-        svr = texts['yes'] if product_data['RAN_IN_SERSER'] else texts['no']
         text = texts['bot_data_details'].format(
             id=id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
-            paid=product_data['FEE_PAID'], server=svr
+            paid=product_data['FEE_PAID'], server='no'
         )
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(texts['back'], callback_data='back_check-project'))
@@ -939,12 +978,11 @@ def all_callback_query_handler(call):
         came_customer_black_list(customer_id,1)
         bot.send_message(cid, texts['user_unbanned_success'])
         bot.send_message(customer_id,texts['unbanned_message'])
-        find_spam_data.pop(customer_id, None)
+        find_spam_data.pop(int(customer_id) , None)
         logging.info(f"Admin manually unbanned user {customer_id}.")
 
     elif data.startswith('delete customer'):
         _, customer_id = data.split('_')
-        print(customer_id)
         purge_customer_entirely(customer_id)
         bot.send_message(cid, texts['user_deleted_success'])
         logging.info(f"Admin manually deleted user {customer_id} account from system.")
@@ -1016,18 +1054,18 @@ def check_find_spam_status(warning_1=60 * 15, warning_2=3600, sleep_time=60):
                 if int(now - data['TIME']) >= warning_1:
                     came_customer_black_list(cid,1)
                     bot.send_message(cid, texts['unbanned_message'])
-                    find_spam_data.pop(cid , None)                   
+                    find_spam_data.pop(int(cid) , None)                   
                     logging.info(f"User {cid} has been auto-unbanned from Stage 1 spam restrictions.")
 
             elif data['STAGE'] == 2 and data['DON'] == 'false':
                 if int(now - data['TIME']) >= warning_2:
                     came_customer_black_list(cid,2)
-                    find_spam_data.pop(cid , None )
+                    find_spam_data.pop(int(cid) , None )
                     logging.info(f"User {cid} has been auto-unbanned from Stage 2 spam restrictions.")
         if now-regester_time >= 3600:
             regester_time=time.time()
             for all in get_black_list_list():
-                find_spam_data.pop(all , None)
+                find_spam_data.pop(int(all) , None)
         time.sleep(sleep_time)
 
 t2 = threading.Thread(target=check_find_spam_status, args=())
