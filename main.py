@@ -90,6 +90,26 @@ def check_token(token):
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return False
+    
+
+
+def download_voice(cid , file_id,file_name):
+    save_path = os.path.join('Data', 'voice', str(cid))
+    os.makedirs(save_path, exist_ok=True)
+    file_info = bot.get_file(file_id)
+    file_path = file_info.file_path
+    content = bot.download_file(file_path)
+    with open(os.path.join(save_path, str(file_name) + 'mp3'), 'wb') as f:
+        f.write(content)
+
+
+def send_voice(cid,customer_id ,text , product_id):
+    save_path = os.path.join('Data', 'voice', str(customer_id))
+    print(save_path)
+    file_name = get_voice_id(product_id)
+    print(file_name)
+    with open(os.path.join(save_path, str(file_name) + '.mp3') , 'rb') as f:
+        bot.send_voice(cid , f , caption=text)
 
 
 # Anti-Spam Control monitoring functionality
@@ -305,7 +325,6 @@ def send_location_file_handler_A(message):
             bot.send_message(cid, texts['file_send_error'])
             logging.error(f'error in send location file: {e}')
         admin_step_send_location_file.pop(cid)
-        admin_send_location_data.pop(cid)
 
 
 
@@ -598,15 +617,21 @@ def user_step_creat_bot_handler_G(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         file_id = message.photo[-1].file_id
-        creat_bot_data[cid]['photo_file_id'] = file_id
+        creat_bot_data[cid] = file_id
         bot.send_message(cid, texts['photo_sent_to_admin'])
+        sale_id = admin_send_location_data[ADMIN[0]]
+        print(sale_id)
+        product_id = get_product_data_f_sale_row(sale_id)["PRODUCT_ID"]
+        print(product_id)
+        product_data=get_product_data(product_id)
+        print(product_data)
         for ad in ADMIN:
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-deposit_true_{cid}'),
-                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-deposit_false_{cid}'))
-            text = texts['admin_payment_received'].format(name=get_customer_data(cid)['name'], amount=creat_bot_data[cid]['total_cost'] / 2)
+            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-deposit-lcn_true_{cid}'),
+                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-deposit-lcn_false_{cid}'))
+            text = texts['admin_payment_received'].format(name=get_customer_data(cid)['name'], amount=product_data['TOTAL_COST']-product_data['FEE_PAID'])
             bot.send_photo(ad, file_id, text, reply_markup=markup)
-
+        admin_send_location_data.pop(ADMIN[0] , None)
 
 
 # Profile execution and handling management
@@ -798,6 +823,7 @@ def all_callback_query_handler(call):
             sale_id = take_random_karakter()
             add_sale(sale_id, customer_id)
             add_sale_row(sale_id, project_id)
+            download_voice(customer_id ,creat_bot_data[customer_id]['voice_file_id'] , str(file_name))
             user_step_creat_bot.pop(customer_id, None)
             creat_bot_data.pop(customer_id, None)
             bot.send_message(customer_id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
@@ -805,7 +831,7 @@ def all_callback_query_handler(call):
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(texts['btn_wrong_amount'], callback_data=f'entered_wrong {customer_id}'))
             markup.add(InlineKeyboardButton(texts['btn_not_receipt'], callback_data=f'photo_not_receipt {customer_id}'))
-            markup.add(InlineKeyboardButton('کامل لغو شود' , callback_data=f'cancel_projrct {customer_id}'))
+            markup.add(InlineKeyboardButton('کامل لغو شود' , callback_data=f'cancel_project {customer_id}'))
             bot.send_message(cid, texts['ask_reject_reason'], reply_markup=markup)
             bot.answer_callback_query(call_id, '✖️')
         bot.delete_message(cid, mid)
@@ -822,7 +848,7 @@ def all_callback_query_handler(call):
         bot.send_message(customer_id, texts['err_invalid_receipt'])
         bot.edit_message_text(texts['msg_sent_to_user_notif'], cid, mid)
     
-    elif data.startswith('cancel_projrct'):
+    elif data.startswith('cancel_project'):
         _, customer_id=data.split()
         user_step_creat_bot.pop(customer_id , None)
         bot.send_message(customer_id,'پروژه شما به صورت کامل لغو شد' ,reply_markup=customer_markup())
@@ -888,19 +914,32 @@ def all_callback_query_handler(call):
         _, id = data.split()
         product_id = get_product_id_f_sale_row(id)
         product_data = get_product_data(product_id['PRODUCT_ID'])
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton('مشاهده ویس' , callback_data=f'see_customer_voice {product_id["PRODUCT_ID"]}'))
+        if get_file_address(product_id['PRODUCT_ID']) !=None:
+            markup.add(InlineKeyboardButton('h' , callback_data=f'see_file_id {product_id["PRODUCT_ID"]}'))
         text = texts['bot_data_details'].format(
             id=id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
             paid=product_data['FEE_PAID'], server='no'
         )
-        markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton(texts['back'], callback_data='back_check-project'))
         bot.edit_message_text(text, cid, mid, reply_markup=markup, parse_mode='HTML')
 
+    elif data.startswith('see_customer_voice'):
+        _ , product_id = data.split()
+        send_voice(cid , 469052184 , 'hello ' , product_id)
+
+    elif data.startswith('see_file_id'):
+        _ , product_id = data.split()
+        project_id = get_file_address(product_id)
+        text = "آدرس گیت هاب"+"\n"+f'github.com/{project_id}'
+        bot.send_message(cid , text)
+
     elif data.startswith('send-lcn-file'):
-        _, id = data.split('_')
+        _, sale_id = data.split('_')
         bot.edit_message_text(texts['enter_github_link'], cid, mid)
         admin_step_send_location_file[cid] = 'A'
-        admin_send_location_data[cid] = id
+        admin_send_location_data[cid] = sale_id
 
     elif data.startswith('send file'):
         _, status = data.split('_')
@@ -983,9 +1022,13 @@ def all_callback_query_handler(call):
 
     elif data.startswith('delete customer'):
         _, customer_id = data.split('_')
-        purge_customer_entirely(customer_id)
-        bot.send_message(cid, texts['user_deleted_success'])
-        logging.info(f"Admin manually deleted user {customer_id} account from system.")
+        try:
+            bot.delete_message(cid, mid)
+            purge_customer_entirely(customer_id)
+            bot.send_message(cid, texts['user_deleted_success'])
+            logging.info(f"Admin manually deleted user {customer_id} account from system.")
+        except:
+            bot.answer_callback_query(call_id , 'این دکمه منغضی شده')
 
     elif data.startswith('back'):
         _, to = data.split('_')
@@ -1001,10 +1044,24 @@ def all_callback_query_handler(call):
             text = texts['profile_info'].format(name=get_customer_data(cid)['name'], phone=get_customer_data(cid)['phone'])
             bot.edit_message_text(text, cid, mid, reply_markup=markup, parse_mode='HTML')
         elif to == 'check-project':
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
-            markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
-            bot.edit_message_reply_markup( cid, mid, reply_markup=markup)
+            if get_all_product_data()!=[]:
+                markup = InlineKeyboardMarkup()
+                markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
+                markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
+                all_project = 0
+                on_project = 0
+                off_project = 0
+                for project in get_all_product_data():
+                    all_project += 1
+                    if project['STATUS'] == 'false':
+                        on_project += 1
+                    else:
+                        off_project += 1
+                text = texts['project_stats_admin'].format(all_project=all_project, on_project=on_project, off_project=off_project)
+                bot.edit_message_text(chat_id=cid, text=text, reply_markup=markup,message_id=mid)
+            else:
+                bot.edit_message_text(chat_id=cid,text=texts['no_active_projects'],message_id=mid)
+
 
 
 # Universal message handler fallback 

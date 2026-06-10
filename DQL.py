@@ -204,3 +204,22 @@ def get_customer_black(customer_id):
     conn.close()
     return data
 
+def get_voice_id(product_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+    SQL_QUERY = "SELECT BOT_SPECE_SOUND_ID FROM PRODUCT WHERE ID=%s;"
+    cur.execute(SQL_QUERY , (product_id, ))
+    data = cur.fetchone()
+    cur.close()
+    conn.close()
+    return data['BOT_SPECE_SOUND_ID']
+
+def get_file_address(product_id):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+    SQL_QUERY = "SELECT PROJECT_FILE_ID FROM PRODUCT WHERE ID=%s;"
+    cur.execute(SQL_QUERY , (product_id, ))
+    data = cur.fetchone()
+    cur.close()
+    conn.close()
+    return data['PROJECT_FILE_ID']
