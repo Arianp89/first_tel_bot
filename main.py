@@ -70,7 +70,7 @@ def admin_markup():
     return markup
 
 
-def back_creat_bot():
+def back_meno():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(texts['go_home'])
     return markup
@@ -99,7 +99,7 @@ def download_voice(cid , file_id,file_name):
     file_info = bot.get_file(file_id)
     file_path = file_info.file_path
     content = bot.download_file(file_path)
-    with open(os.path.join(save_path, str(file_name) + 'mp3'), 'wb') as f:
+    with open(os.path.join(save_path, str(file_name) + '.mp3'), 'wb') as f:
         f.write(content)
 
 
@@ -144,7 +144,6 @@ def find_spam(cid, maximum_time=1, maximum_watch=5):
 def listener(messages):
     for m in messages:
         find_spam( m.chat.id)
-        register_user(m.chat.id, m.chat.first_name)
         if m.content_type == 'text':
             print(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
             logging.info(f"{m.chat.first_name} [{str(m.chat.id)}]: {m.text}")
@@ -181,6 +180,8 @@ def back_to_home_handler(message):
     if check_black_list(cid) == False:
         if cid in user_step_creat_bot:
             user_step_creat_bot.pop(cid)
+        if cid in user_step_profile:
+            user_step_profile.pop(cid)
         bot.send_message(cid, texts['choose_from_menu'], reply_markup=customer_markup())
 
 
@@ -274,9 +275,12 @@ def admin_send_message_to_customer_handler_A_B(message):
             bot.send_message(cid, text)
         elif step == 'B':
             customer_id = admin_send_message_to_customer_data[cid]
-            bot.send_message(customer_id, message.text)
-            bot.send_message(cid, texts['message_sent_success'])
-        admin_send_message_to_customer.pop(cid)
+            try:
+                bot.send_message(customer_id, message.text)
+                bot.send_message(cid, texts['message_sent_success'])
+            except:
+                bot.send_message(cid , 'پیام ارسال نشد')
+        admin_send_message_to_customer.pop(cid) 
 
 
 
@@ -312,7 +316,6 @@ def send_location_file_handler_A(message):
             sale_id = admin_send_location_data[cid]
             github_id = message.text
             add_file_project(github_id, get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
-            change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
             customer_id = get_customer_id(sale_id)
             product_data = get_product_data(get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
             user_step_creat_bot[customer_id]='G'
@@ -434,13 +437,16 @@ def creat_bot_handler(message):
                 text=texts['enter_bot_details_no_server']
             else:
                 text=texts['enter_bot_details_server']
-            bot.send_message(cid , text , reply_markup=back_creat_bot())
+            bot.send_message(cid , text , reply_markup=back_meno())
             user_step_creat_bot[cid] = 'C'
 
 @bot.message_handler(func=lambda message: user_step_creat_bot.get(message.chat.id) == 'A')
 def create_bot_handler_A(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
+        if len(message.text) > 20:
+            bot.send_message(cid , 'کاراکتر کمتر از 20 وارد کنید')
+            return
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(KeyboardButton(texts['send_contact_btn'], request_contact=True))
         send_message(cid, texts['enter_phone'], reply_markup=markup)
@@ -462,7 +468,7 @@ def create_bot_handler_B_contact(message):
                 text=texts['enter_bot_details_no_server']
             else:
                 text=texts['enter_bot_details_server']
-            bot.send_message(cid , text)
+            bot.send_message(cid , text , reply_markup=back_meno())
         user_step_creat_bot[cid]='C'
 
 
@@ -519,7 +525,7 @@ def creat_bot_hadler_C(message):
             creat_bot_data[cid]['total_cost'] = int(total_cost)
             creat_bot_data[cid]['time_give'] = int(time_give)
             creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
-            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
+            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_meno())
             user_step_creat_bot[cid] = 'D'
         elif have_email(cid) == None:
             try:
@@ -547,7 +553,7 @@ def creat_bot_hadler_C(message):
             creat_bot_data[cid]['time_give'] = int(time_give)
             creat_bot_data[cid]['FEE_PAID'] = int(total_cost) / 2
             add_email_password(cid, email, password) 
-            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_creat_bot())
+            bot.send_message(cid, texts['send_voice_features'], reply_markup=back_meno())
             user_step_creat_bot[cid] = 'D'
         else:
             bot.send_message(cid, texts['invalid_token_retry'])
@@ -593,21 +599,22 @@ def user_step_create_bot_handler_E(message):
 def user_step_create_bot_handler_F(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
-        id = int(creat_bot_data[cid])
+        customer_id = int(creat_bot_data[cid])
         file_name = str(time.time()).replace('.', '')
         project_id = add_new_product(None,
-                                        creat_bot_data[id]['token'],
-                                        int(creat_bot_data[id]['time_give']),
+                                        creat_bot_data[customer_id]['token'],
+                                        int(creat_bot_data[customer_id]['time_give']),
                                         int(file_name), 
-                                        creat_bot_data[id]['total_cost'],
+                                        creat_bot_data[customer_id]['total_cost'],
                                         int(message.text),
                                         'false')
         sale_id = take_random_karakter()
-        add_sale(sale_id, id)
+        add_sale(sale_id, customer_id)
         add_sale_row(sale_id, project_id)
-        user_step_creat_bot.pop(id, None)
-        creat_bot_data.pop(id, None)
-        bot.send_message(id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
+        # download_voice(customer_id ,creat_bot_data[customer_id]['voice_file_id'] , str(file_name))
+        user_step_creat_bot.pop(customer_id, None)
+        creat_bot_data.pop(customer_id, None)
+        bot.send_message(customer_id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
 
 
 
@@ -620,18 +627,17 @@ def user_step_creat_bot_handler_G(message):
         creat_bot_data[cid] = file_id
         bot.send_message(cid, texts['photo_sent_to_admin'])
         sale_id = admin_send_location_data[ADMIN[0]]
-        print(sale_id)
+        customer_id = get_customer_id(sale_id)
         product_id = get_product_data_f_sale_row(sale_id)["PRODUCT_ID"]
-        print(product_id)
         product_data=get_product_data(product_id)
-        print(product_data)
         for ad in ADMIN:
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-deposit-lcn_true_{cid}'),
-                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-deposit-lcn_false_{cid}'))
+            markup.add(InlineKeyboardButton(texts['confirm'], callback_data=f'check-lcn_true_{sale_id}'),
+                       InlineKeyboardButton(texts['cancel'], callback_data=f'check-lcn_false_{sale_id}'))
             text = texts['admin_payment_received'].format(name=get_customer_data(cid)['name'], amount=product_data['TOTAL_COST']-product_data['FEE_PAID'])
             bot.send_photo(ad, file_id, text, reply_markup=markup)
         admin_send_location_data.pop(ADMIN[0] , None)
+        user_step_creat_bot.pop(customer_id , None )
 
 
 # Profile execution and handling management
@@ -823,7 +829,7 @@ def all_callback_query_handler(call):
             sale_id = take_random_karakter()
             add_sale(sale_id, customer_id)
             add_sale_row(sale_id, project_id)
-            download_voice(customer_id ,creat_bot_data[customer_id]['voice_file_id'] , str(file_name))
+            # download_voice(customer_id ,creat_bot_data[customer_id]['voice_file_id'] , str(file_name))
             user_step_creat_bot.pop(customer_id, None)
             creat_bot_data.pop(customer_id, None)
             bot.send_message(customer_id, texts['order_registered'].format(id=sale_id), reply_markup=customer_markup())
@@ -869,11 +875,11 @@ def all_callback_query_handler(call):
         user_step_profile[cid] = 'A'    
 
     elif data == ('change_customer_phone_number'):
-        send_message(cid, texts['enter_phone'])
+        send_message(cid, texts['enter_phone'] , reply_markup=back_meno())
         user_step_profile[cid] = 'B'
 
     elif data == "change_customer_name":
-        bot.send_message(cid, texts['enter_name'])
+        bot.send_message(cid, texts['enter_name'] , reply_markup=back_meno())
         user_step_profile[cid] = 'A'
 
     elif data == 'my_bots':
@@ -890,14 +896,31 @@ def all_callback_query_handler(call):
             bot.edit_message_text('رباتی برای شما ثبت نشده',cid,mid,reply_markup=markup)
 
     elif data.startswith('bot data'):
-        _, id = data.split('_')
-        product_id = get_product_id_f_sale_row(id)['PRODUCT_ID']
+        _, sale_id = data.split('_')
+        product_id = get_product_id_f_sale_row(sale_id)['PRODUCT_ID']
         product_data = get_product_data(product_id)
-        text = texts['bot_data_details'].format(
-            id=id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
-            paid=product_data['FEE_PAID'], server='no'
+        customer_id = get_customer_id(sale_id)
+        markup = InlineKeyboardMarkup()
+        if product_data['STATUS'] == 'false':
+            status = 'در حال انجام'
+        elif product_data['STATUS'] == 'true':
+            status = 'انجام شده'
+        else:
+            markup.add(InlineKeyboardButton('پرداخت' , callback_data=f'payment {sale_id}'))
+            status = 'not pay'
+        text = texts['customer_bot_data_details'].format(
+            id=sale_id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
+            paid=product_data['FEE_PAID'] , status=status
         )
-        bot.edit_message_text(text, cid, mid, parse_mode='HTML')
+        bot.edit_message_text(text, cid, mid, parse_mode='HTML' , reply_markup=markup)
+
+    elif data.startswith('payment'):
+        _ , sale_id = data.split()
+        product_id = get_product_id_f_sale_row(sale_id)["PRODUCT_ID"]
+        product_data = get_product_data(product_id)
+        user_step_creat_bot[cid] = 'G'
+        admin_send_location_data[ADMIN[0]] = sale_id
+        bot.send_message(cid , f'لطفا مابغی مبلغ {product_data['TOTAL_COST']-product_data['FEE_PAID']} را به شمازه کارت زیر واریز کنید')
 
     elif data.startswith('check-projects'):
         _, status = data.split('_')
@@ -911,23 +934,26 @@ def all_callback_query_handler(call):
         bot.edit_message_reply_markup(cid, mid, reply_markup=markup)
 
     elif data.startswith('show_project_data'):
-        _, id = data.split()
-        product_id = get_product_id_f_sale_row(id)
+        _, sale_id = data.split()
+        product_id = get_product_id_f_sale_row(sale_id)
         product_data = get_product_data(product_id['PRODUCT_ID'])
+        customer_id = get_customer_id(sale_id)
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton('مشاهده ویس' , callback_data=f'see_customer_voice {product_id["PRODUCT_ID"]}'))
         if get_file_address(product_id['PRODUCT_ID']) !=None:
-            markup.add(InlineKeyboardButton('h' , callback_data=f'see_file_id {product_id["PRODUCT_ID"]}'))
-        text = texts['bot_data_details'].format(
-            id=id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
-            paid=product_data['FEE_PAID'], server='no'
+            markup.add(InlineKeyboardButton('آدرس گیت هاب' , callback_data=f'see_file_id {product_id["PRODUCT_ID"]}'))
+        text = texts['admin_bot_data_details'].format(
+            id=sale_id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
+            paid=product_data['FEE_PAID'],customer_id=customer_id
         )
         markup.add(InlineKeyboardButton(texts['back'], callback_data='back_check-project'))
         bot.edit_message_text(text, cid, mid, reply_markup=markup, parse_mode='HTML')
 
     elif data.startswith('see_customer_voice'):
         _ , product_id = data.split()
-        send_voice(cid , 469052184 , 'hello ' , product_id)
+        sale_id = get_sale_id(product_id)['SALE_ID']
+        customer_id = get_customer_id(sale_id)
+        send_voice(cid , customer_id , 'hello ' , product_id)
 
     elif data.startswith('see_file_id'):
         _ , product_id = data.split()
@@ -1029,6 +1055,32 @@ def all_callback_query_handler(call):
             logging.info(f"Admin manually deleted user {customer_id} account from system.")
         except:
             bot.answer_callback_query(call_id , 'این دکمه منغضی شده')
+
+    elif data.startswith('check-lcn'):
+        _ , status , sale_id =data.split("_")
+        customer_id = int(get_customer_id(sale_id))
+        if status == 'true':
+            change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
+            bot.send_message(customer_id , 'پروژه شما تا چندین دقیقه دیگر در دست رس است')
+        elif status == 'false':
+            admin_send_location_data[ADMIN[0]] = customer_id
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton('مبلغ وارد شده اشتباه بود' ,callback_data=f'enter-wrong-lcn {customer_id}'))
+            markup.add(InlineKeyboardButton('cancel', callback_data=f'cancel-lcn {sale_id} {customer_id}'))
+            bot.send_message(cid , 'چرا لغو شد' ,reply_markup=markup)
+        bot.delete_message(cid , mid)
+
+    elif data.startswith('enter-wrong-lcn'):
+        _ , customer_id = data.split()
+        user_step_creat_bot[customer_id] = 'G'
+        bot.send_message(customer_id , 'مابغی مبلغ  را وارد کنید')
+
+    elif data.startswith('cancel-lcn'):
+        _ , sale_id , customer_id = data.split()
+        customer_id = int(customer_id)
+        change_product_status('not pay' ,get_product_id_f_sale_row(sale_id)['PRODUCT_ID'] )
+        bot.send_message(customer_id , 'عکس فیش اشتباه بود شما میتوانید در قسمت پروفایل آن را پرداخت کنید')
+        bot.send_message(cid , 'برای کاربر ارسال شد')
 
     elif data.startswith('back'):
         _, to = data.split('_')
