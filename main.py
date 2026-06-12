@@ -224,6 +224,7 @@ def check_project_handler_admin(message):
                 markup = InlineKeyboardMarkup()
                 markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
                 markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
+                markup.add(InlineKeyboardButton('پرداخت نشده' , callback_data=f'check-projects_not pay'))
                 all_project = 0
                 on_project = 0
                 off_project = 0
@@ -319,9 +320,7 @@ def send_location_file_handler_A(message):
             customer_id = get_customer_id(sale_id)
             product_data = get_product_data(get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
             user_step_creat_bot[customer_id]='G'
-            text=f""" کاربر:{get_customer_data(customer_id)['name']}
-پروژه شما با کد:{sale_id} با موفقیت تمام شد لطفا مابقی مبلغ یعنی {product_data['TOTAL_COST']-product_data['FEE_PAID']} را به ارین پناهی واریز کنید
-"""
+            text=texts['end_admin_approved_pay'].format(amount = product_data['TOTAL_COST']-product_data['FEE_PAID']  , sale_id = sale_id)
             bot.send_message(int(customer_id), text , reply_markup=customer_markup())
             bot.send_message(cid, texts['file_link_saved'])
         except Exception as e:
@@ -445,7 +444,7 @@ def create_bot_handler_A(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if len(message.text) > 20:
-            bot.send_message(cid , 'کاراکتر کمتر از 20 وارد کنید')
+            bot.send_message(cid , texts['error_send_low_caracter'])
             return
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(KeyboardButton(texts['send_contact_btn'], request_contact=True))
@@ -510,16 +509,17 @@ def creat_bot_hadler_C(message):
                 try:
                     token, total_cost, time_give =data.split('\n')
                 except Exception as e:
-                    text=texts['enter_bot_details_no_server']
-                    bot.send_message(cid , 'لطفا این موارد را به همین شکل وارد کنید' + '\n' + text)
+                    text=texts['error_enter_bot_details_no_server']
+                    bot.send_message(cid , text)
+                    return
             if check_integer(time_give)==False and check_integer(total_cost)==False:
-                bot.send_message(cid , 'مبلغ کل و تاریخ تحویل را به عدد وارد کنید')
+                bot.send_message(cid , texts['send_integer'])
                 return
             elif check_integer(total_cost)==False:
-                bot.send_message(cid , 'مبلغ کل را به عدد وارد کنید')
+                bot.send_message(cid , texts['integer_cost'])
                 return
             elif check_integer(time_give)==False:
-                bot.send_message(cid , 'تاریخ تحویل را به عدد وارد کنید')
+                bot.send_message(cid , texts['integer_time-give'])
                 return
             creat_bot_data[cid]['token'] = token
             creat_bot_data[cid]['total_cost'] = int(total_cost)
@@ -534,17 +534,17 @@ def creat_bot_hadler_C(message):
                 try:
                     email, password, token, total_cost, time_give= data.split('\n')
                 except Exception as e:
-                    text=texts['enter_bot_details_server']
-                    bot.send_message(cid , 'لطفا این موارد را به همین شکل وارد کنید' + '\n' + text)
+                    text=texts['error_enter_bot_details_server']
+                    bot.send_message(cid , text)
                     return
             if check_integer(time_give)==False and check_integer(total_cost)==False:
-                bot.send_message(cid , 'مبلغ کل و تاریخ تحویل را به عدد وارد کنید')
+                bot.send_message(cid , texts['send_integer'])
                 return
             elif check_integer(total_cost)==False:
-                bot.send_message(cid , 'مبلغ کل را به عدد وارد کنید')
+                bot.send_message(cid , texts['integer_cost'])
                 return
             elif check_integer(time_give)==False:
-                bot.send_message(cid , 'تاریخ تحویل را به عدد وارد کنید')
+                bot.send_message(cid , texts['integer_time-give'])
                 return
             creat_bot_data[cid]['email'] = email
             creat_bot_data[cid]['password'] = password
@@ -667,7 +667,7 @@ def user_step_profile_A(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         if len(message.text) >= 20:
-            bot.send_message(cid,'کاراکتر کمتر از 20 وارد کنید')
+            bot.send_message(cid , texts['error_send_low_caracter'])
             return
         if get_customer_data(cid)['phone'] != None:
             name=message.text
@@ -717,13 +717,10 @@ def user_step_profile_B_text(message):
         phone=message.text
         if phone.startswith('0'):
             phone = phone[1:]
-        # if len(phone) >= 10:
-        #     bot.send_message(cid,'یک بار دیگه تلاش کنید')
-        #     return
         try:
             int(phone)
         except:
-            bot.send_message(cid,'لطفا عدد وارد کنید')
+            bot.send_message(cid , texts['er_send_to_number'] )
             return
 
         if get_customer_data(cid)['phone'] != None and len(phone) == 10:
@@ -736,7 +733,7 @@ def user_step_profile_B_text(message):
             user_step_profile.pop(cid)
             bot.send_message(cid, texts['info_saved_success'], reply_markup=customer_markup())
         else:
-             bot.send_message(cid,'یک بار دیگه تلاش کنید')
+             bot.send_message(cid , texts['send_again'])
 
 
 
@@ -1100,6 +1097,7 @@ def all_callback_query_handler(call):
                 markup = InlineKeyboardMarkup()
                 markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
                 markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
+                markup.add(InlineKeyboardButton('پرداخت نشده' , callback_data=f'check-projects_not pay'))
                 all_project = 0
                 on_project = 0
                 off_project = 0
