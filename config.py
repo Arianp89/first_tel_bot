@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, filename='project.log',encoding="utf-8" 
 db_confing={'host': os.environ.get('db_host'),'user': os.environ.get('db_user'),'password': os.environ.get('password')}
 database_name = os.environ.get('db_name')
 
-ADMIN=[60794725]
+ADMIN=[5456538169]
 API_TOKEN = os.environ.get('tel_token')
 
 proxy_1=os.environ.get('proxy_1')
