@@ -16,7 +16,7 @@ import datetime
 # setup_proxy(proxy_1)
 # setup_proxy(proxy_2)
 
-telebot.apihelper.API_URL = 'http://tapi.bale.ai/bot{0}/{1}'
+# telebot.apihelper.API_URL = 'http://tapi.bale.ai/bot{0}/{1}'
 bot = telebot.TeleBot(API_TOKEN)
 
 # Initialize application global state dictionaries
@@ -224,7 +224,7 @@ def check_project_handler_admin(message):
                 markup = InlineKeyboardMarkup()
                 markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
                 markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
-                markup.add(InlineKeyboardButton('پرداخت نشده' , callback_data=f'check-projects_not pay'))
+                markup.add(InlineKeyboardButton(texts['btn_not_paid_projects'] , callback_data=f'check-projects_not pay'))
                 all_project = 0
                 on_project = 0
                 off_project = 0
@@ -280,7 +280,7 @@ def admin_send_message_to_customer_handler_A_B(message):
                 bot.send_message(customer_id, message.text)
                 bot.send_message(cid, texts['message_sent_success'])
             except:
-                bot.send_message(cid , 'پیام ارسال نشد')
+                bot.send_message(cid , texts['msg_send_failed'])
         admin_send_message_to_customer.pop(cid) 
 
 
@@ -416,7 +416,7 @@ def about_us_handler(message):
                     text += f"{number}: @{check_res[1]}\n"
             send_message(cid, text)
         else:
-            bot.send_message(cid,'این دکمه فعلا خاموش است')
+            bot.send_message(cid,texts['about_us_disabled'])
 
 
 
@@ -672,7 +672,7 @@ def user_step_profile_A(message):
         if get_customer_data(cid)['phone'] != None:
             name=message.text
             edit_customer_name(name, cid)
-            text=' نام شما به '+ name +' تغییر کرد '
+            text=texts['name_changed']
             bot.send_message(cid,text)
             user_step_profile.pop(cid)
         else:
@@ -696,7 +696,7 @@ def user_step_profile_B(message):
                     phone_number = phone_number[1:]
                 edit_customer_phone(phone_number, cid)
                 user_step_profile.pop(cid)
-            text ='شماره تماس شما به  '+ phone_number +' تغییر کرد '
+            text =texts['phone_changed']
             bot.send_message(cid,text, parse_mode='HTML')
             user_step_profile.pop(cid)
         else:
@@ -725,7 +725,7 @@ def user_step_profile_B_text(message):
 
         if get_customer_data(cid)['phone'] != None and len(phone) == 10:
             edit_customer_phone(message.text, cid)
-            text ='شماره تماس شما به  '+ phone +' تغییر کرد '
+            text =texts['phone_changed']
             bot.send_message( cid , text )
             user_step_profile.pop(cid)
         elif len(phone) == 10:
@@ -854,8 +854,8 @@ def all_callback_query_handler(call):
     elif data.startswith('cancel_project'):
         _, customer_id=data.split()
         user_step_creat_bot.pop(customer_id , None)
-        bot.send_message(customer_id,'پروژه شما به صورت کامل لغو شد' ,reply_markup=customer_markup())
-        bot.send_message(cid , 'پروژه کاربر با موفقیت لغو شد')
+        bot.send_message(customer_id,texts['project_cancelled_user'] ,reply_markup=customer_markup())
+        bot.send_message(cid , texts['project_cancelled_admin'])
 
     elif data == 'change_information':
         markup = InlineKeyboardMarkup()
@@ -890,7 +890,7 @@ def all_callback_query_handler(call):
             bot.edit_message_reply_markup(cid, mid, reply_markup=markup)
         else:
             markup.add(InlineKeyboardButton(texts['back'], callback_data='back_mybots'))
-            bot.edit_message_text('رباتی برای شما ثبت نشده',cid,mid,reply_markup=markup)
+            bot.edit_message_text(texts['no_bots_registered'],cid,mid,reply_markup=markup)
 
     elif data.startswith('bot data'):
         _, sale_id = data.split('_')
@@ -904,7 +904,7 @@ def all_callback_query_handler(call):
             status = 'انجام شده'
         else:
             markup.add(InlineKeyboardButton('پرداخت' , callback_data=f'payment {sale_id}'))
-            status = 'not pay'
+            status = 'پرداخت نشده'
         text = texts['customer_bot_data_details'].format(
             id=sale_id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
             paid=product_data['FEE_PAID'] , status=status
@@ -917,7 +917,7 @@ def all_callback_query_handler(call):
         product_data = get_product_data(product_id)
         user_step_creat_bot[cid] = 'G'
         admin_send_location_data[ADMIN[0]] = sale_id
-        bot.send_message(cid , f'لطفا مابغی مبلغ {product_data['TOTAL_COST']-product_data['FEE_PAID']} را به شمازه کارت زیر واریز کنید')
+        bot.send_message(cid , texts['pay_remaining'].format(amount = product_data['TOTAL_COST']-product_data['FEE_PAID']))
 
     elif data.startswith('check-projects'):
         _, status = data.split('_')
@@ -936,9 +936,9 @@ def all_callback_query_handler(call):
         product_data = get_product_data(product_id['PRODUCT_ID'])
         customer_id = get_customer_id(sale_id)
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton('مشاهده ویس' , callback_data=f'see_customer_voice {product_id["PRODUCT_ID"]}'))
+        markup.add(InlineKeyboardButton(texts['btn_see_voice'] , callback_data=f'see_customer_voice {product_id["PRODUCT_ID"]}'))
         if get_file_address(product_id['PRODUCT_ID']) !=None:
-            markup.add(InlineKeyboardButton('آدرس گیت هاب' , callback_data=f'see_file_id {product_id["PRODUCT_ID"]}'))
+            markup.add(InlineKeyboardButton(texts['btn_github_address'] , callback_data=f'see_file_id {product_id["PRODUCT_ID"]}'))
         text = texts['admin_bot_data_details'].format(
             id=sale_id, token=product_data['BOT_TOKEN'], total_cost=product_data['TOTAL_COST'],
             paid=product_data['FEE_PAID'],customer_id=customer_id
@@ -1058,13 +1058,14 @@ def all_callback_query_handler(call):
         customer_id = int(get_customer_id(sale_id))
         if status == 'true':
             change_product_status('true', get_product_id_f_sale_row(sale_id)['PRODUCT_ID'])
-            bot.send_message(customer_id , 'پروژه شما تا چندین دقیقه دیگر در دست رس است')
+            bot.send_message(customer_id , texts['project_available_soon'])
+            bot.send_message(cid , f'پروژه {sale_id} را ران کنید')
         elif status == 'false':
             admin_send_location_data[ADMIN[0]] = customer_id
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton('مبلغ وارد شده اشتباه بود' ,callback_data=f'enter-wrong-lcn {customer_id}'))
             markup.add(InlineKeyboardButton('cancel', callback_data=f'cancel-lcn {sale_id} {customer_id}'))
-            bot.send_message(cid , 'چرا لغو شد' ,reply_markup=markup)
+            bot.send_message(cid , texts['cancel_lcn_reason'] ,reply_markup=markup)
         bot.delete_message(cid , mid)
 
     elif data.startswith('enter-wrong-lcn'):
@@ -1076,7 +1077,7 @@ def all_callback_query_handler(call):
         _ , sale_id , customer_id = data.split()
         customer_id = int(customer_id)
         change_product_status('not pay' ,get_product_id_f_sale_row(sale_id)['PRODUCT_ID'] )
-        bot.send_message(customer_id , 'عکس فیش اشتباه بود شما میتوانید در قسمت پروفایل آن را پرداخت کنید')
+        bot.send_message(customer_id ,texts['receipt_wrong_notify'])
         bot.send_message(cid , 'برای کاربر ارسال شد')
 
     elif data.startswith('back'):
@@ -1097,7 +1098,7 @@ def all_callback_query_handler(call):
                 markup = InlineKeyboardMarkup()
                 markup.add(InlineKeyboardButton(texts['active_projects'], callback_data='check-projects_false'))
                 markup.add(InlineKeyboardButton(texts['finished_projects'], callback_data='check-projects_true'))
-                markup.add(InlineKeyboardButton('پرداخت نشده' , callback_data=f'check-projects_not pay'))
+                markup.add(InlineKeyboardButton(texts['btn_not_paid_projects'] , callback_data=f'check-projects_not pay'))
                 all_project = 0
                 on_project = 0
                 off_project = 0

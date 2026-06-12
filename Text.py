@@ -1,4 +1,3 @@
-
 texts = {
     # --- دکمه‌های اصلی ---
     'back': '🔙 بازگشت به قبل',
@@ -109,5 +108,31 @@ texts = {
     'enter_github_link': '🔗 لطفاً لینک گیت‌هاب پروژه را بدون عبارت github.com وارد کنید:',
     'enter_message_to_send': '✍️ لطفاً پیام خود را برای ارسال وارد کنید:',
     'admin_new_order': '📥 <b>سفارش جدید دریافت شد!</b>\n\n👤 نام: {name}\n💰 هزینه کل: {cost}\n⏳ زمان: {time} روز\n🔑 توکن: <code>{token}</code>',
-    'admin_payment_received': '💳 <b>فیش واریزی جدید!</b>\n\n👤 نام: {name}\n💵 مبلغ پیش‌پرداخت: {amount} ریال'
+    'admin_payment_received': '💳 <b>فیش واریزی جدید!</b>\n\n👤 نام: {name}\n💵 مبلغ پیش‌پرداخت: {amount} ریال',
+
+    # --- متون استخراج‌شده از main.py (hardcode) ---
+    'about_us_disabled': '⚠️ این بخش فعلاً غیرفعال است.',
+    'msg_send_failed': '❌ پیام ارسال نشد. لطفاً مجدداً تلاش کنید.',
+    'name_changed': '✅ نام شما به <b>{name}</b> تغییر یافت.',
+    'phone_changed': '✅ شماره تماس شما به <code>{phone}</code> تغییر یافت.',
+    'no_bots_registered': '⚠️ هیچ ربات فعالی برای شما ثبت نشده است.',
+    'project_status_active': '🟢 در حال انجام',
+    'project_status_done': '✅ انجام شده',
+    'project_status_not_paid': '💳 پرداخت نشده',
+    'btn_not_paid_projects': '💳 پرداخت نشده',
+    'btn_pay': '💳 پرداخت',
+    'pay_remaining': '💳 لطفاً مبلغ باقی‌مانده ({amount} تومان) را به شماره کارت زیر واریز کنید:\n\n👤 آرین پناهی\n💳 <code>6219861856616676</code>',
+    'project_cancelled_user': '❌ پروژه شما به‌طور کامل لغو شد.',
+    'project_cancelled_admin': '✅ پروژه کاربر با موفقیت لغو شد.',
+    'project_available_soon': '⏳ پروژه شما تا چند دقیقه دیگر در دسترس خواهد بود.',
+    'cancel_lcn_reason': '❓ دلیل لغو چیست؟',
+    'cancel_lcn_wrong_amount': '💳 مبلغ وارد شده اشتباه بود',
+    'enter_remaining_amount': '💰 مابقی مبلغ را وارد کنید:',
+    'receipt_wrong_notify': '⚠️ عکس فیش اشتباه بود. می‌توانید از بخش پروفایل نسبت به پرداخت اقدام کنید.',
+    'receipt_notif_sent': '📩 اطلاع‌رسانی برای کاربر ارسال شد.',
+    'github_address': '🔗 آدرس گیت‌هاب:\ngithub.com/{path}',
+    'btn_see_voice': '🎙️ مشاهده ویس',
+    'btn_github_address': '🔗 آدرس گیت‌هاب',
+    'btn_cancel_inline': '✖️ لغو',
+    'btn_payment': '💳 پرداخت',
 }
