@@ -223,3 +223,26 @@ def get_file_address(product_id):
     cur.close()
     conn.close()
     return data['PROJECT_FILE_ID']
+
+
+def search_customer(customer_id=None , phone=None , name=None):
+    conn = mysql.connector.connect(**db_confing, database=database_name)
+    cur = conn.cursor(dictionary=True)
+
+    if customer_id !=None:
+        SQL_QUERY = "SELECT * FROM CUSTOMER WHERE ID=%s;"
+        data = customer_id
+    elif phone !=None:
+        SQL_QUERY = "SELECT * FROM CUSTOMER WHERE PHONE=%s;"
+        data = phone
+    elif name !=None:
+        SQL_QUERY = "SELECT * FROM CUSTOMER WHERE NAME=%s;"
+        data = name
+
+    cur.execute(SQL_QUERY , (data, ))
+    data = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not data:
+        return False
+    return data

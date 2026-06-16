@@ -16,13 +16,15 @@ import datetime
 # setup_proxy(proxy_1)
 # setup_proxy(proxy_2)
 
-# telebot.apihelper.API_URL = 'http://tapi.bale.ai/bot{0}/{1}'
+telebot.apihelper.API_URL = 'http://tapi.bale.ai/bot{0}/{1}'
 bot = telebot.TeleBot(API_TOKEN)
 
 # Initialize application global state dictionaries
+search_step = dict()
+search_data = dict()
 user_step_ai = dict()
-contact_us_data = dict()
 creat_bot_data = dict()
+contact_us_data = dict()
 user_step_profile = dict()
 user_step_creat_bot = dict()
 user_step_contact_us = dict()
@@ -74,6 +76,14 @@ def back_meno():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(texts['go_home'])
     return markup
+
+
+def check_integer(text):
+    try:
+        int(text)
+        return True
+    except:
+        return False
 
 
 # Token verification routing check
@@ -250,8 +260,8 @@ def admin_send_file_to_customer_handler(message):
     cid = message.chat.id
     if check_black_list(cid) == False:
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton(texts['send_to_all'], callback_data='send file_all'))
-        markup.add(InlineKeyboardButton(texts['send_to_one'], callback_data="send file_one"))
+        markup.add(InlineKeyboardButton(texts['send_to_all'], callback_data='send-message-to_all'))
+        markup.add(InlineKeyboardButton(texts['send_to_one'], callback_data="send-message-to_one"))
         bot.send_message(cid, texts['admin_choose_menu'], reply_markup=markup)
     
 
@@ -350,6 +360,33 @@ def ai_handler_A(message):
         text = ai(message.text)
         bot.send_message(cid, text)
         user_step_ai.pop(cid)
+
+@bot.message_handler(func=lambda message: search_step.get(message.chat.id) == 'A')
+def search_step_A(message):
+    cid = message.chat.id
+    search_by = search_data[cid]
+    data = message.text
+    if search_by == 'id' or search_by == 'phone':
+        if not check_integer(data):
+            bot.send_message(cid , 'شماره و یا کد کاربر را به عدد وارد کنید')
+            return
+        customer_data = search_customer(data)
+        if not customer_data :
+            bot.send_message(cid , 'کاربری با این اطلاعات وجود ندارد دوباره تلاش کنید')
+            return
+        bot.send_message(cid , texts['ask_send_phone'])
+        search_step[cid] = "B"
+        search_data[cid] = customer_data['ID']
+    
+
+@bot.message_handler(func=lambda message: search_step.get(message.chat.id) == 'B')
+def search_step_B(message):
+    cid = message.chat.id
+    customer_id = search_data[cid]
+    bot.send_message(customer_id , message.text)
+    bot.send_message(cid , texts['msg_sent_to_admin_success'])
+    search_data.pop(cid)
+    search_step.pop(cid)
 
 
 
@@ -494,13 +531,7 @@ def create_bot_handler_B_text(message):
 def creat_bot_hadler_C(message):
     cid = message.chat.id
     data=message.text
-    def check_integer(text):
-        try:
-            int(text)
-            return True
-        except:
-            return False
-                
+      
     if check_black_list(cid) == False:
         if have_email(cid) != None:
             try:
@@ -964,25 +995,109 @@ def all_callback_query_handler(call):
         admin_step_send_location_file[cid] = 'A'
         admin_send_location_data[cid] = sale_id
 
-    elif data.startswith('send file'):
+    elif data.startswith('send-message-to'):
         _, status = data.split('_')
         if status == 'all':
             admin_send_message_to_customer[cid] = 'A'
             bot.edit_message_text(texts['enter_message_to_send'], cid, mid)
-        elif status == 'one':
+        else:
             markup = InlineKeyboardMarkup()
-            for i in get_all_customer_data():
-                if i['PHONE'] == None:
+            markup.add(InlineKeyboardButton('مشاهده لیست کاربران' , callback_data=f'show_list_of_customer'))
+            markup.add(InlineKeyboardButton('جستوجو کاربر' , callback_data=f'search_customer'))
+            bot.edit_message_text('یکی از این گذینه ها رو انتخاب کنید' , cid , mid  , reply_markup=markup)
+
+
+    elif data.startswith('search_customer'):
+        markup =InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton('کد عددی' , callback_data=f'search-by_id' ))
+        markup.add(InlineKeyboardButton('نام' , callback_data=f'search-by_name' ),
+                   InlineKeyboardButton('شماره تماس' , callback_data=f'search-by_phone' ))
+        bot.edit_message_text(chat_id=cid ,message_id=mid, text='میخواهید بر چه اساسی سرچ کنید' , reply_markup=markup)
+
+    elif data.startswith('search-by'):
+        _ , search_by = data.split('_')
+        print(search_by)
+        if search_by == 'id':
+            bot.edit_message_text('لطفا کد کاربر مورد نظر را وارد کنید:' , cid , mid)
+            search_data[cid] = 'id'
+        elif search_by == 'name':
+            bot.edit_message_text('لطفا نام کاربر مورد نظر را وارد کنید:' , cid , mid)
+            search_data[cid] = 'name'
+        elif search_by == 'phone':
+            search_data[cid] = 'phone'
+            bot.edit_message_text('لطفا شمازه تماس کاربر مورد نظر را وارد کنید:' , cid , mid)
+        search_step[cid] = 'A'
+
+    elif data.startswith('show_list_of_customer'):
+        markup = InlineKeyboardMarkup()
+        all_customer_data = get_all_customer_data()
+        if len(all_customer_data) > 5:
+            for customer_data in all_customer_data[:5]:
+                if customer_data['PHONE'] == None:
                     phone = texts['not_registered']
-                    name = i['NAME']
+                    name = customer_data['NAME']
                 else:
-                    name = i['NAME']
-                    phone = i['PHONE']
-                markup.add(InlineKeyboardButton(str(i['ID']), callback_data=f"send message_{i['ID']}"),
-                           InlineKeyboardButton(name, callback_data=f"send message_{i['ID']}"),
-                           InlineKeyboardButton(str(phone), callback_data=f"send message_{i['ID']}")
-                           )
+                    name = customer_data['NAME']
+                    phone = customer_data['PHONE']
+                markup.add(InlineKeyboardButton(str(customer_data['ID']), callback_data=f"send message_{customer_data['ID']}"),
+                        InlineKeyboardButton(name, callback_data=f"send message_{customer_data['ID']}"),
+                        InlineKeyboardButton(str(phone), callback_data=f"send message_{customer_data['ID']}")
+                        )
+            markup.add(InlineKeyboardButton('رفتن به صفحه قبل' , callback_data=f"go_page send_message back {1}"),
+                        InlineKeyboardButton('رفتن به صفحه بعد' , callback_data=f"go_page send_message next {1}"))
             bot.edit_message_text(texts['choose_user_to_msg'], cid, mid, reply_markup=markup)
+            return
+
+        for i in all_customer_data():
+            if i['PHONE'] == None:
+                phone = texts['not_registered']
+                name = i['NAME']
+            else:
+                name = i['NAME']
+                phone = i['PHONE']
+            markup.add(InlineKeyboardButton(str(i['ID']), callback_data=f"send message_{i['ID']}"),
+                        InlineKeyboardButton(name, callback_data=f"send message_{i['ID']}"),
+                        InlineKeyboardButton(str(phone), callback_data=f"send message_{i['ID']}")
+                        )
+        bot.edit_message_text(texts['choose_user_to_msg'], cid, mid, reply_markup=markup)
+
+    elif data.startswith('go_page '):
+        _ , button , status , page_number = data.split()
+        page_number = int(page_number)
+        markup = InlineKeyboardMarkup()
+        all_customer_data = get_all_customer_data()
+        if status == 'back':
+            if page_number == 1:
+                bot.answer_callback_query(call_id , 'به صفحه قبل نمیتوان رفت')
+                return
+            page_number -= 1 
+        elif status == 'next':
+            page_number +=1
+            if int(len(all_customer_data)) < int((page_number-1) * 5):
+                bot.answer_callback_query(call_id , 'نمیتوان رفت به صفحه بعد') 
+                return
+
+        for customer_data in all_customer_data[5*(page_number-1):5*page_number]:
+            if customer_data['PHONE'] == None:
+                phone = texts['not_registered']
+                name = customer_data['NAME']
+            else:
+                name = customer_data['NAME']
+                phone = customer_data['PHONE']
+            if button == 'send_message':
+                markup.add(InlineKeyboardButton(str(customer_data['ID']), callback_data=f"send message_{customer_data['ID']}"),
+                        InlineKeyboardButton(name, callback_data=f"send message_{customer_data['ID']}"),
+                        InlineKeyboardButton(str(phone), callback_data=f"send message_{customer_data['ID']}")
+                        )
+            elif button == 'see_customer':
+                markup.add(InlineKeyboardButton(str(customer_data['ID']), callback_data=f"see customer_{customer_data['ID']}"),
+                InlineKeyboardButton(name, callback_data=f"see customer_{customer_data['ID']}"),
+                InlineKeyboardButton(str(phone), callback_data=f"see customer_{customer_data['ID']}")
+                )
+        markup.add(InlineKeyboardButton('رفتن به صفحه قبل' , callback_data=f"go_page {button} back {page_number}"),
+                    InlineKeyboardButton('رفتن به صفحه بعد' , callback_data=f"go_page {button} next {page_number}"))
+        bot.edit_message_text(texts['choose_user_to_msg'], cid, mid, reply_markup=markup)
+
             
     elif data.startswith('send message'):
         _, customer_id = data.split('_')
@@ -992,6 +1107,29 @@ def all_callback_query_handler(call):
 
     elif data == 'customer_data':
         markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton('مشاهده لیست کاربران' , callback_data=f'show_list_of_customer'))
+        markup.add(InlineKeyboardButton('جستوجو کاربر' , callback_data=f'search_customer'))
+        bot.edit_message_text('یکی از این گذینه ها رو انتخاب کنید' , cid , mid  , reply_markup=markup)
+
+        markup = InlineKeyboardMarkup()
+        all_customer_data = get_all_customer_data()
+        if len(all_customer_data) > 5:
+            for customer_data in all_customer_data[:5]:
+                if customer_data['PHONE'] == None:
+                    phone = texts['not_registered']
+                    name = customer_data['NAME']
+                else:
+                    name = customer_data['NAME']
+                    phone = customer_data['PHONE']
+                markup.add(InlineKeyboardButton(str(customer_data['ID']), callback_data=f"see customer_{customer_data['ID']}"),
+                        InlineKeyboardButton(name, callback_data=f"see customer_{customer_data['ID']}"),
+                        InlineKeyboardButton(str(phone), callback_data=f"see customer_{customer_data['ID']}")
+                        )
+            markup.add(InlineKeyboardButton('رفتن به صفحه قبل' , callback_data=f"go_page see_customer back {1}"),
+                        InlineKeyboardButton('رفتن به صفحه بعد' , callback_data=f"go_page see_customer next {1}"))
+            bot.edit_message_text(texts['choose_user_to_msg'], cid, mid, reply_markup=markup)
+            return
+        
         for i in get_all_customer_data():
             if i['PHONE'] == None:
                 phone = texts['not_registered']
